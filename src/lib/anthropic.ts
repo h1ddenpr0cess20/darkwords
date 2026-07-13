@@ -250,6 +250,22 @@ export async function streamAssistantTurn(opts: {
   const system = `${systemPrompt}${buildToolInstructions(toolDefs)}`;
   const byName = new Map(clientTools.map((t) => [t.name, t]));
 
+  // Every round streams into the same message, so text written before a tool
+  // call would otherwise run straight into the text written after it. Separate
+  // the two with a paragraph break, but only once the next round actually
+  // produces text — a trailing break on a round that says nothing looks wrong.
+  let wroteText = false;
+  let breakPending = false;
+
+  const emitText = (delta: string) => {
+    if (breakPending) {
+      callbacks.onTextDelta?.('\n\n');
+      breakPending = false;
+    }
+    wroteText = true;
+    callbacks.onTextDelta?.(delta);
+  };
+
   for (let round = 0; round < MAX_TOOL_ROUNDTRIPS; round++) {
     const params: Anthropic.Beta.MessageCreateParamsStreaming = {
       model: model.apiModel,
@@ -283,7 +299,7 @@ export async function streamAssistantTurn(opts: {
     const stream = client.beta.messages.stream(params, { signal });
 
     stream.on('thinking', (delta) => callbacks.onThinkingDelta?.(delta));
-    stream.on('text', (delta) => callbacks.onTextDelta?.(delta));
+    stream.on('text', (delta) => emitText(delta));
     stream.on('contentBlock', (block) => {
       if (block.type === 'server_tool_use' || block.type === 'mcp_tool_use') {
         callbacks.onToolCall?.({
@@ -315,6 +331,7 @@ export async function streamAssistantTurn(opts: {
     // re-send so the model can resume; otherwise the answer is silently cut off.
     if (finalMessage.stop_reason === 'pause_turn') {
       messages.push({ role: 'assistant', content: finalMessage.content });
+      if (wroteText) breakPending = true;
       continue;
     }
 
@@ -361,6 +378,7 @@ export async function streamAssistantTurn(opts: {
     }
 
     messages.push({ role: 'user', content: results });
+    if (wroteText) breakPending = true;
   }
 
   callbacks.onError?.(`Stopped after ${MAX_TOOL_ROUNDTRIPS} tool rounds without a final answer.`);

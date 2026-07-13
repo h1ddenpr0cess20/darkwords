@@ -92,20 +92,26 @@ function buildTools(
 ): Anthropic.Beta.BetaToolUnion[] {
   const list: Anthropic.Beta.BetaToolUnion[] = [];
 
+  // Code execution is itself the programmatic-tool-calling surface, so a model
+  // without PTC can't run it at all.
+  const codeEnabled = tools.code && model.supportsProgrammaticTools;
+
   if (tools.web) {
-    // The dynamic-filtering search variant runs its filter code via programmatic
-    // tool calling. On a model without it (Haiku), the API rejects the request
-    // unless the tool is pinned to direct invocation.
+    // web_search_20260209 filters results dynamically by running code under the
+    // hood. That makes it a poor neighbour: declared next to an explicit
+    // code_execution tool the model sees two execution environments and starts
+    // writing code for questions it should just search. It also needs PTC, which
+    // Haiku lacks. In both cases fall back to the basic search tool, which has
+    // no hidden executor.
+    const useBasicSearch = codeEnabled || !model.supportsProgrammaticTools;
     list.push(
-      model.supportsProgrammaticTools
-        ? { type: 'web_search_20260209', name: 'web_search' }
-        : { type: 'web_search_20260209', name: 'web_search', allowed_callers: ['direct'] },
+      useBasicSearch
+        ? { type: 'web_search_20250305', name: 'web_search' }
+        : { type: 'web_search_20260209', name: 'web_search' },
     );
   }
 
-  // Code execution is itself the programmatic-tool-calling surface; models
-  // without it can't run the tool at all.
-  if (tools.code && model.supportsProgrammaticTools) {
+  if (codeEnabled) {
     list.push({ type: 'code_execution_20260521', name: 'code_execution' });
   }
   if (tools.image && imageToolAvailable) {
@@ -123,6 +129,33 @@ function buildTools(
     });
   }
   return list;
+}
+
+/**
+ * Tells the model what each enabled tool is *for*. Without this it will happily
+ * reach for the code interpreter to answer questions it should search for.
+ */
+function buildToolInstructions(tools: Anthropic.Beta.BetaToolUnion[]): string {
+  const has = (name: string) => tools.some((t) => 'name' in t && t.name === name);
+  const lines: string[] = [];
+
+  if (has('web_search')) {
+    lines.push(
+      'Use the web_search tool whenever the answer depends on current information — recent events, prices, releases, documentation, or anything you are unsure about. Search rather than answering from memory, and never write code to fetch web content.',
+    );
+  }
+  if (has('code_execution')) {
+    lines.push(
+      'Use the code_execution tool only for computation, data analysis, and file processing — never to look things up or retrieve web pages.',
+    );
+  }
+  if (has(IMAGE_TOOL_NAME)) {
+    lines.push(
+      'Use the generate_image tool when the user asks for an image. You cannot see the images it produces, so do not describe their contents afterwards.',
+    );
+  }
+
+  return lines.length ? `\n\nTool use:\n${lines.map((l) => `- ${l}`).join('\n')}` : '';
 }
 
 function summarizeServerToolResult(block: Anthropic.Beta.BetaContentBlock): { output: string; isError: boolean } {
@@ -186,12 +219,13 @@ export async function streamAssistantTurn(opts: {
 
   const toolDefs = buildTools(tools, model, imageToolAvailable);
   const useThinking = thinkingEnabled && model.supportsThinking;
+  const system = `${systemPrompt}${buildToolInstructions(toolDefs)}`;
 
   for (let round = 0; round < MAX_TOOL_ROUNDTRIPS; round++) {
     const params: Anthropic.Beta.MessageCreateParamsStreaming = {
       model: model.apiModel,
       max_tokens: model.maxTokens,
-      system: systemPrompt,
+      system,
       messages,
       stream: true,
       ...(toolDefs.length ? { tools: toolDefs } : {}),

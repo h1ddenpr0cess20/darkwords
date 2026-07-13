@@ -104,11 +104,44 @@ export interface ToolsEnabled {
   image: boolean;
 }
 
-/** How the system prompt is composed. Mirrors Wordmark's prompt modes. */
+/** How the system prompt is composed. */
 export type PromptMode = 'personality' | 'custom' | 'none' | 'party';
 
+/** A brief fact the assistant keeps about the user, injected into the prompt. */
+export interface Memory {
+  id: string;
+  text: string;
+  createdAt: number;
+}
+
+/** A SKILL.md instruction package, loaded on demand by the model. */
+export interface Skill {
+  id: string;
+  name: string;
+  description: string;
+  content: string;
+  enabled: boolean;
+}
+
+/** A remote MCP server, connected via Anthropic's MCP connector. */
+export interface McpServer {
+  id: string;
+  name: string;
+  url: string;
+  authToken?: string;
+  enabled: boolean;
+}
+
 export type PanelId = 'settings' | 'history' | 'gallery' | null;
-export type SettingsTab = 'model' | 'tools' | 'personality' | 'theme' | 'apikeys';
+export type SettingsTab =
+  | 'model'
+  | 'tools'
+  | 'personality'
+  | 'memory'
+  | 'skills'
+  | 'theme'
+  | 'apikeys'
+  | 'data';
 
 export interface GalleryItem {
   id: string;

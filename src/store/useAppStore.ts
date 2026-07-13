@@ -4,26 +4,28 @@ import type {
   Attachment,
   ChatMessage,
   Conversation,
+  Effort,
   GalleryItem,
+  McpServer,
+  Memory,
   ModelDef,
   ModelId,
   PanelId,
   PromptMode,
   SettingsTab,
+  Skill,
   ThemeId,
   ToolsEnabled,
 } from '../types';
 import { MODELS } from '../lib/config';
 import { makeId } from '../lib/id';
 import { parseBlocks, partsToPlainText } from '../lib/blocks';
-import {
-  completeOnce,
-  streamAssistantTurn,
-  type ApiMessage,
-  type ImageToolResult,
-} from '../lib/anthropic';
-import { generateImage, ImageGenError } from '../lib/images';
+import { completeOnce, streamAssistantTurn, type ApiMessage } from '../lib/anthropic';
 import { buildSystemPrompt, DEFAULT_PERSONALITY_NAME } from '../lib/prompt';
+import type { ClientTool } from '../lib/tools/types';
+import { imageTool } from '../lib/tools/image';
+import { memoryContext, memoryTools } from '../lib/tools/memory';
+import { parseSkill, skillsContext, skillTool } from '../lib/tools/skills';
 import { partyEngine, type PartyHost, type TranscriptLine } from '../lib/party/engine';
 import {
   defaultPartyConfig,
@@ -63,6 +65,18 @@ interface AppState {
   customPrompt: string;
   verbose: boolean;
 
+  // Reasoning effort override (null = the model's default).
+  effort: Effort | null;
+
+  // Memory.
+  memoryEnabled: boolean;
+  memoryLimit: number;
+  memories: Memory[];
+
+  // Skills + MCP servers.
+  skills: Skill[];
+  mcpServers: McpServer[];
+
   // Party mode.
   partyDraft: PartyConfig;
   partyStatus: PartyStatus;
@@ -91,6 +105,26 @@ interface AppState {
   toggleTool: (key: keyof ToolsEnabled) => void;
   setApiKey: (key: string) => void;
   setImageApiKey: (key: string) => void;
+
+  setEffort: (effort: Effort | null) => void;
+
+  toggleMemory: () => void;
+  setMemoryLimit: (limit: number) => void;
+  addMemory: (text: string) => void;
+  removeMemory: (id: string) => void;
+  clearMemories: () => void;
+
+  importSkill: (fileName: string, source: string) => void;
+  toggleSkill: (id: string) => void;
+  removeSkill: (id: string) => void;
+
+  addMcpServer: (server: Omit<McpServer, 'id' | 'enabled'>) => void;
+  toggleMcpServer: (id: string) => void;
+  removeMcpServer: (id: string) => void;
+
+  exportData: () => string;
+  importData: (json: string) => boolean;
+  clearAllData: () => void;
 
   setPromptMode: (mode: PromptMode) => void;
   setPersonalityName: (name: string) => void;
@@ -202,6 +236,13 @@ export const useAppStore = create<AppState>()(
       apiKey: '',
       imageApiKey: '',
 
+      effort: null,
+      memoryEnabled: false,
+      memoryLimit: 25,
+      memories: [],
+      skills: [],
+      mcpServers: [],
+
       promptMode: 'personality',
       personalityName: DEFAULT_PERSONALITY_NAME,
       customPrompt: '',
@@ -235,6 +276,127 @@ export const useAppStore = create<AppState>()(
       toggleTool: (key) => set((s) => ({ toolsEnabled: { ...s.toolsEnabled, [key]: !s.toolsEnabled[key] } })),
       setApiKey: (key) => set({ apiKey: key.trim() }),
       setImageApiKey: (key) => set({ imageApiKey: key.trim() }),
+
+      setEffort: (effort) => set({ effort }),
+
+      toggleMemory: () => set((s) => ({ memoryEnabled: !s.memoryEnabled })),
+      setMemoryLimit: (limit) =>
+        set((s) => {
+          const next = Math.max(1, Math.floor(limit) || 1);
+          // Tightening the limit drops the oldest memories immediately.
+          return { memoryLimit: next, memories: s.memories.slice(-next) };
+        }),
+      addMemory: (text) =>
+        set((s) => {
+          const trimmed = text.trim();
+          if (!trimmed) return {};
+          const memories = [...s.memories, { id: makeId('mem'), text: trimmed, createdAt: Date.now() }];
+          return { memories: memories.slice(-s.memoryLimit) };
+        }),
+      removeMemory: (id) => set((s) => ({ memories: s.memories.filter((m) => m.id !== id) })),
+      clearMemories: () => set({ memories: [] }),
+
+      importSkill: (fileName, source) =>
+        set((s) => {
+          const parsed = parseSkill(fileName, source);
+          if (!parsed.content) return {};
+          // Re-importing a skill replaces it rather than duplicating it.
+          const others = s.skills.filter((sk) => sk.name.toLowerCase() !== parsed.name.toLowerCase());
+          return { skills: [...others, { id: makeId('skill'), ...parsed, enabled: true }] };
+        }),
+      toggleSkill: (id) =>
+        set((s) => ({ skills: s.skills.map((sk) => (sk.id === id ? { ...sk, enabled: !sk.enabled } : sk)) })),
+      removeSkill: (id) => set((s) => ({ skills: s.skills.filter((sk) => sk.id !== id) })),
+
+      addMcpServer: (server) =>
+        set((s) => {
+          const name = server.name.trim();
+          const url = server.url.trim();
+          if (!name || !url) return {};
+          const others = s.mcpServers.filter((m) => m.name !== name);
+          return {
+            mcpServers: [
+              ...others,
+              { id: makeId('mcp'), name, url, authToken: server.authToken?.trim() || undefined, enabled: true },
+            ],
+          };
+        }),
+      toggleMcpServer: (id) =>
+        set((s) => ({ mcpServers: s.mcpServers.map((m) => (m.id === id ? { ...m, enabled: !m.enabled } : m)) })),
+      removeMcpServer: (id) => set((s) => ({ mcpServers: s.mcpServers.filter((m) => m.id !== id) })),
+
+      exportData: () => {
+        const s = get();
+        // Keys are deliberately excluded — an export is a file that gets shared.
+        return JSON.stringify(
+          {
+            exportedAt: new Date().toISOString(),
+            conversations: s.conversations,
+            conversationOrder: s.conversationOrder,
+            galleryItems: s.galleryItems,
+            memories: s.memories,
+            skills: s.skills,
+            mcpServers: s.mcpServers.map((m) => ({ ...m, authToken: undefined })),
+            settings: {
+              selectedModelId: s.selectedModelId,
+              themeId: s.themeId,
+              toolsEnabled: s.toolsEnabled,
+              promptMode: s.promptMode,
+              personalityName: s.personalityName,
+              customPrompt: s.customPrompt,
+              verbose: s.verbose,
+              effort: s.effort,
+              memoryEnabled: s.memoryEnabled,
+              memoryLimit: s.memoryLimit,
+            },
+          },
+          null,
+          2,
+        );
+      },
+
+      importData: (json) => {
+        try {
+          const data = JSON.parse(json) as Record<string, unknown>;
+          const conversations = data.conversations as Record<string, Conversation> | undefined;
+          if (!conversations || typeof conversations !== 'object') return false;
+
+          const order = Array.isArray(data.conversationOrder)
+            ? (data.conversationOrder as string[]).filter((id) => conversations[id])
+            : Object.keys(conversations);
+          if (!order.length) return false;
+
+          set({
+            conversations,
+            conversationOrder: order,
+            activeConvoId: order[0],
+            galleryItems: Array.isArray(data.galleryItems) ? (data.galleryItems as GalleryItem[]) : [],
+            memories: Array.isArray(data.memories) ? (data.memories as Memory[]) : [],
+            skills: Array.isArray(data.skills) ? (data.skills as Skill[]) : [],
+            mcpServers: Array.isArray(data.mcpServers) ? (data.mcpServers as McpServer[]) : [],
+            ...((data.settings as object) ?? {}),
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
+      clearAllData: () => {
+        partyEngine.reset();
+        const fresh = emptyConversation();
+        set({
+          conversations: { [fresh.id]: fresh },
+          conversationOrder: [fresh.id],
+          activeConvoId: fresh.id,
+          galleryItems: [],
+          memories: [],
+          skills: [],
+          mcpServers: [],
+          input: '',
+          pendingUploads: [],
+        });
+      },
 
       setPromptMode: (mode) => set({ promptMode: mode }),
       setPersonalityName: (name) => set({ personalityName: name }),
@@ -484,18 +646,15 @@ export const useAppStore = create<AppState>()(
           await streamAssistantTurn({
             apiKey: s0.apiKey,
             model: mdl,
-            systemPrompt: buildSystemPrompt({
-              mode: s0.promptMode,
-              personalityName: s0.personalityName,
-              customPrompt: s0.customPrompt,
-              verbose: s0.verbose,
-            }),
+            systemPrompt: composeSystemPrompt(s0),
             thinkingEnabled: true,
+            effort: effectiveEffort(s0, mdl),
             tools: s0.toolsEnabled,
-            imageToolAvailable: Boolean(s0.imageApiKey),
+            clientTools: buildClientTools(s0, cid, assistantId),
+            mcpServers: s0.mcpServers,
             history,
             signal,
-            callbacks: streamCallbacks(cid, assistantId, signal),
+            callbacks: streamCallbacks(cid, assistantId),
           });
 
           set((s) =>
@@ -529,27 +688,118 @@ export const useAppStore = create<AppState>()(
         personalityName: s.personalityName,
         customPrompt: s.customPrompt,
         verbose: s.verbose,
+        effort: s.effort,
+        memoryEnabled: s.memoryEnabled,
+        memoryLimit: s.memoryLimit,
+        memories: s.memories,
+        skills: s.skills,
+        mcpServers: s.mcpServers,
         galleryItems: s.galleryItems,
       }),
-      // Older versions stored mock seed data, hue-based placeholder art, and the
-      // hardcoded persona round-robin that party mode replaces.
-      migrate: () => ({
-        conversations: { [firstConversation.id]: firstConversation },
-        conversationOrder: [firstConversation.id],
-        activeConvoId: firstConversation.id,
-        galleryItems: [] as GalleryItem[],
-      }),
+      migrate: (persisted, version) => {
+        const state = (persisted ?? {}) as Record<string, unknown>;
+
+        // v1 shipped mock seed conversations and hue-based placeholder gallery
+        // art, neither of which survives. Everything else the user set — keys
+        // included — is theirs and must be carried across.
+        if (version < 2) {
+          return {
+            ...state,
+            conversations: { [firstConversation.id]: firstConversation },
+            conversationOrder: [firstConversation.id],
+            activeConvoId: firstConversation.id,
+            galleryItems: [] as GalleryItem[],
+          };
+        }
+        return state;
+      },
     },
   ),
 );
+
+/** The effort actually sent: the user's override, else the model's default. */
+function effectiveEffort(s: AppState, model: ModelDef): Effort {
+  return s.effort ?? model.effort;
+}
+
+/**
+ * The system prompt plus everything that hangs off it — stored memories and the
+ * catalogue of available skills.
+ */
+function composeSystemPrompt(s: AppState): string {
+  const base = buildSystemPrompt({
+    mode: s.promptMode,
+    personalityName: s.personalityName,
+    customPrompt: s.customPrompt,
+    verbose: s.verbose,
+  });
+  const memories = s.memoryEnabled ? memoryContext(s.memories) : '';
+  return `${base}${memories}${skillsContext(s.skills)}`;
+}
+
+/**
+ * The tools Darkwords runs itself for a turn. `allow` narrows them to what a
+ * party character was granted; ordinary chat allows everything switched on.
+ */
+function buildClientTools(
+  s: AppState,
+  cid: string,
+  messageId: string,
+  allow: { image: boolean } = { image: true },
+): ClientTool[] {
+  const tools: ClientTool[] = [];
+
+  if (s.toolsEnabled.image && s.imageApiKey && allow.image) {
+    tools.push(
+      imageTool({
+        apiKey: s.imageApiKey,
+        onImage: (prompt, dataUrl) => {
+          useAppStore.setState((st) => ({
+            ...withConvo(st as AppState, cid, (c) =>
+              patchMessage(c, messageId, (m) => ({
+                imageGen: [...(m.imageGen ?? []), { src: dataUrl, label: prompt }],
+              })),
+            ),
+            galleryItems: [
+              { id: makeId('g'), label: prompt, kind: 'Generated' as const, src: dataUrl, createdAt: Date.now() },
+              ...(st as AppState).galleryItems,
+            ],
+          }));
+        },
+      }),
+    );
+  }
+
+  if (s.memoryEnabled) {
+    tools.push(
+      ...memoryTools({
+        add: (text) => {
+          useAppStore.getState().addMemory(text);
+          return { ok: true, total: useAppStore.getState().memories.length };
+        },
+        forget: (keyword) => {
+          const needle = keyword.toLowerCase();
+          const matches = useAppStore.getState().memories.filter((m) => m.text.toLowerCase().includes(needle));
+          for (const m of matches) useAppStore.getState().removeMemory(m.id);
+          return { ok: true, removed: matches.map((m) => m.text) };
+        },
+        list: () => useAppStore.getState().memories,
+      }),
+    );
+  }
+
+  const skills = skillTool(s.skills);
+  if (skills) tools.push(skills);
+
+  return tools;
+}
 
 /**
  * Streaming callbacks shared by ordinary chat and party turns — both stream into
  * a message bubble and record tool calls and generated images the same way.
  */
-function streamCallbacks(cid: string, messageId: string, signal: AbortSignal) {
+function streamCallbacks(cid: string, messageId: string) {
   const set = useAppStore.setState;
-  const get = useAppStore.getState;
 
   return {
     onThinkingDelta: (delta: string) => {
@@ -574,26 +824,6 @@ function streamCallbacks(cid: string, messageId: string, signal: AbortSignal) {
     },
     onToolResult: (info: { id: string; output: string; isError?: boolean }) => {
       set((s) => withConvo(s as AppState, cid, (c) => patchMessage(c, messageId, (m) => resolveTool(m, info))));
-    },
-    onImageRequested: async (prompt: string): Promise<ImageToolResult> => {
-      try {
-        const { dataUrl, revisedPrompt } = await generateImage({ apiKey: get().imageApiKey, prompt, signal });
-        set((s) => ({
-          ...withConvo(s as AppState, cid, (c) =>
-            patchMessage(c, messageId, (m) => ({ imageGen: [...(m.imageGen ?? []), { src: dataUrl, label: prompt }] })),
-          ),
-          galleryItems: [
-            { id: makeId('g'), label: prompt, kind: 'Generated' as const, src: dataUrl, createdAt: Date.now() },
-            ...(s as AppState).galleryItems,
-          ],
-        }));
-        return { ok: true, dataUrl, note: revisedPrompt };
-      } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          return { ok: false, error: 'Cancelled by the user.' };
-        }
-        return { ok: false, error: err instanceof ImageGenError || err instanceof Error ? err.message : String(err) };
-      }
     },
     onError: (message: string) => {
       set((s) => withConvo(s as AppState, cid, (c) => patchMessage(c, messageId, { error: message })));
@@ -647,11 +877,13 @@ const host: PartyHost = {
       model,
       systemPrompt,
       thinkingEnabled: true,
+      effort: effectiveEffort(s, model),
       tools,
-      imageToolAvailable: Boolean(s.imageApiKey),
+      clientTools: buildClientTools(s, cid, messageId, { image: tools.image }),
+      mcpServers: s.mcpServers,
       history: [{ role: 'user', text: prompt }],
       signal,
-      callbacks: streamCallbacks(cid, messageId, signal),
+      callbacks: streamCallbacks(cid, messageId),
     });
 
     const message = useAppStore.getState().conversations[cid]?.messages.find((m) => m.id === messageId);

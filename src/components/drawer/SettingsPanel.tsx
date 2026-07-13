@@ -3,7 +3,11 @@ import { useAppStore } from '../../store/useAppStore';
 import { MODELS, THEMES } from '../../lib/config';
 import { IMAGE_MODEL } from '../../lib/images';
 import { PartyForm } from './PartyForm';
-import type { PromptMode, SettingsTab, ToolsEnabled } from '../../types';
+import { MemoryPanel } from './MemoryPanel';
+import { SkillsPanel } from './SkillsPanel';
+import { McpServers } from './McpServers';
+import { DataPanel } from './DataPanel';
+import type { Effort, PromptMode, SettingsTab, ToolsEnabled } from '../../types';
 import styles from './SettingsPanel.module.css';
 
 const PROMPT_MODES: { key: PromptMode; label: string }[] = [
@@ -17,8 +21,20 @@ const TABS: { key: SettingsTab; label: string }[] = [
   { key: 'model', label: 'Model' },
   { key: 'tools', label: 'Tools' },
   { key: 'personality', label: 'Personality' },
+  { key: 'memory', label: 'Memory' },
+  { key: 'skills', label: 'Skills' },
   { key: 'theme', label: 'Theme' },
-  { key: 'apikeys', label: 'API Key' },
+  { key: 'apikeys', label: 'Keys' },
+  { key: 'data', label: 'Data' },
+];
+
+const EFFORTS: { key: Effort | null; label: string; hint: string }[] = [
+  { key: null, label: 'Default', hint: 'Whatever the selected model uses' },
+  { key: 'low', label: 'Low', hint: 'Fastest, cheapest; shallow reasoning' },
+  { key: 'medium', label: 'Medium', hint: 'Balanced' },
+  { key: 'high', label: 'High', hint: 'Recommended for anything intelligence-sensitive' },
+  { key: 'xhigh', label: 'X-High', hint: 'Best for hard coding and agentic work' },
+  { key: 'max', label: 'Max', hint: 'Correctness over cost; can overthink' },
 ];
 
 const TOOL_DEFS: { key: keyof ToolsEnabled; label: string; hint: string }[] = [
@@ -50,9 +66,11 @@ export function SettingsPanel() {
   const setApiKey = useAppStore((s) => s.setApiKey);
   const imageApiKey = useAppStore((s) => s.imageApiKey);
   const setImageApiKey = useAppStore((s) => s.setImageApiKey);
+  const effort = useAppStore((s) => s.effort);
+  const setEffort = useAppStore((s) => s.setEffort);
 
   return (
-    <>
+    <div className={styles.body}>
       <div className={styles.tabs}>
         {TABS.map((t) => (
           <button
@@ -82,8 +100,31 @@ export function SettingsPanel() {
                 </span>
               </button>
             ))}
+
+            <div className={styles.sectionLabel} style={{ marginTop: 18 }}>
+              REASONING EFFORT
+            </div>
+            <p className={styles.info}>
+              How hard Claude thinks before answering. Not supported on Haiku, which never uses extended thinking.
+            </p>
+            <div className={styles.modeRow}>
+              {EFFORTS.map((e) => (
+                <button
+                  key={e.label}
+                  className={`${styles.modeBtn} ${effort === e.key ? styles.modeBtnOn : ''}`}
+                  onClick={() => setEffort(e.key)}
+                  title={e.hint}
+                >
+                  {e.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
+
+        {panelTab === 'memory' && <MemoryPanel />}
+        {panelTab === 'skills' && <SkillsPanel />}
+        {panelTab === 'data' && <DataPanel />}
 
         {panelTab === 'tools' && (
           <div className={styles.section}>
@@ -110,6 +151,8 @@ export function SettingsPanel() {
             )}
           </div>
         )}
+
+        {panelTab === 'tools' && <McpServers />}
 
         {panelTab === 'personality' && (
           <>
@@ -243,6 +286,6 @@ export function SettingsPanel() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

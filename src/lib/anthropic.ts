@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { Attachment, ModelDef, ToolsEnabled } from '../types';
+import type { Attachment, Effort, McpServer, ModelDef, ToolsEnabled } from '../types';
+import type { ClientTool } from './tools/types';
 
 export interface ApiMessage {
   role: 'user' | 'assistant';
@@ -7,21 +8,19 @@ export interface ApiMessage {
   attachments?: Attachment[];
 }
 
-/** Outcome of fulfilling a client-side image tool call. */
-export type ImageToolResult = { ok: true; dataUrl: string; note?: string } | { ok: false; error: string };
-
 export interface StreamCallbacks {
   onThinkingDelta?: (delta: string) => void;
   onTextDelta?: (delta: string) => void;
   onToolCall?: (info: { id: string; name: string; input: string }) => void;
   onToolResult?: (info: { id: string; output: string; isError?: boolean }) => void;
-  /** Fulfils a `generate_image` call against the external image API. */
-  onImageRequested?: (prompt: string) => Promise<ImageToolResult>;
   onError?: (message: string) => void;
 }
 
-const IMAGE_TOOL_NAME = 'generate_image';
-const MAX_TOOL_ROUNDTRIPS = 6;
+/** Guards against a model that keeps calling tools without ever answering. */
+const MAX_TOOL_ROUNDTRIPS = 8;
+
+/** Beta required for Anthropic's MCP connector. */
+const MCP_BETA = 'mcp-client-2025-11-20';
 
 function dataUrlToBase64(dataUrl: string): string {
   const comma = dataUrl.indexOf(',');
@@ -41,9 +40,9 @@ function base64ToText(base64: string): string | null {
 
 type ContentBlockParam = Anthropic.Beta.BetaContentBlockParam;
 
-function attachmentToBlock(att: Attachment): ContentBlockParam | null {
-  // An attachment with no bytes (e.g. a failed read) would be rejected by the
-  // API as an empty source, so describe it as text instead of sending it.
+function attachmentToBlock(att: Attachment): ContentBlockParam {
+  // An attachment with no bytes would be rejected as an empty source, so
+  // describe it as text rather than sending it.
   if (!att.dataUrl) {
     return { type: 'text', text: `[attached file: ${att.name} — content unavailable]` };
   }
@@ -60,10 +59,7 @@ function attachmentToBlock(att: Attachment): ContentBlockParam | null {
     };
   }
   if (att.mimeType === 'application/pdf') {
-    return {
-      type: 'document',
-      source: { type: 'base64', media_type: 'application/pdf', data: base64 },
-    };
+    return { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } };
   }
   const text = base64ToText(base64);
   return text
@@ -74,10 +70,7 @@ function attachmentToBlock(att: Attachment): ContentBlockParam | null {
 function toApiContent(m: ApiMessage, includeAttachments: boolean): ContentBlockParam[] {
   const blocks: ContentBlockParam[] = [];
   if (includeAttachments) {
-    for (const att of m.attachments ?? []) {
-      const block = attachmentToBlock(att);
-      if (block) blocks.push(block);
-    }
+    for (const att of m.attachments ?? []) blocks.push(attachmentToBlock(att));
   }
   if (m.text) blocks.push({ type: 'text', text: m.text });
   // The API rejects an empty content array — never emit one.
@@ -88,7 +81,8 @@ function toApiContent(m: ApiMessage, includeAttachments: boolean): ContentBlockP
 function buildTools(
   tools: ToolsEnabled,
   model: ModelDef,
-  imageToolAvailable: boolean,
+  clientTools: ClientTool[],
+  mcpServers: McpServer[],
 ): Anthropic.Beta.BetaToolUnion[] {
   const list: Anthropic.Beta.BetaToolUnion[] = [];
 
@@ -98,11 +92,10 @@ function buildTools(
 
   if (tools.web) {
     // web_search_20260209 filters results dynamically by running code under the
-    // hood. That makes it a poor neighbour: declared next to an explicit
-    // code_execution tool the model sees two execution environments and starts
-    // writing code for questions it should just search. It also needs PTC, which
-    // Haiku lacks. In both cases fall back to the basic search tool, which has
-    // no hidden executor.
+    // hood. Declared next to an explicit code_execution tool, the model sees two
+    // execution environments and writes code for things it should just search.
+    // It also needs PTC, which Haiku lacks. Both cases fall back to the basic
+    // search tool, which has no hidden executor.
     const useBasicSearch = codeEnabled || !model.supportsProgrammaticTools;
     list.push(
       useBasicSearch
@@ -114,20 +107,15 @@ function buildTools(
   if (codeEnabled) {
     list.push({ type: 'code_execution_20260521', name: 'code_execution' });
   }
-  if (tools.image && imageToolAvailable) {
-    list.push({
-      name: IMAGE_TOOL_NAME,
-      description:
-        'Generate an image from a text prompt using an external image model. Use when the user asks for an image, illustration, cover art, or diagram. Write a vivid, self-contained prompt; the image model cannot see the conversation.',
-      input_schema: {
-        type: 'object',
-        properties: {
-          prompt: { type: 'string', description: 'A detailed, self-contained description of the image to generate' },
-        },
-        required: ['prompt'],
-      },
-    });
+
+  for (const tool of clientTools) {
+    list.push({ name: tool.name, description: tool.description, input_schema: tool.input_schema });
   }
+
+  for (const server of mcpServers.filter((s) => s.enabled)) {
+    list.push({ type: 'mcp_toolset', mcp_server_name: server.name });
+  }
+
   return list;
 }
 
@@ -141,17 +129,17 @@ function buildToolInstructions(tools: Anthropic.Beta.BetaToolUnion[]): string {
 
   if (has('web_search')) {
     lines.push(
-      'Use the web_search tool whenever the answer depends on current information — recent events, prices, releases, documentation, or anything you are unsure about. Search rather than answering from memory, and never write code to fetch web content.',
+      'Use web_search whenever the answer depends on current information — recent events, prices, releases, documentation, or anything you are unsure about. Search rather than answering from memory, and never write code to fetch web content.',
     );
   }
   if (has('code_execution')) {
     lines.push(
-      'Use the code_execution tool only for computation, data analysis, and file processing — never to look things up or retrieve web pages.',
+      'Use code_execution only for computation, data analysis, and file processing — never to look things up or retrieve web pages.',
     );
   }
-  if (has(IMAGE_TOOL_NAME)) {
+  if (has('generate_image')) {
     lines.push(
-      'Use the generate_image tool when the user asks for an image. You cannot see the images it produces, so do not describe their contents afterwards.',
+      'Use generate_image when the user asks for an image. You cannot see the images it produces, so do not describe their contents afterwards.',
     );
   }
 
@@ -175,7 +163,7 @@ function summarizeServerToolResult(block: Anthropic.Beta.BetaContentBlock): { ou
   }
 
   if (block.type === 'bash_code_execution_tool_result' || block.type === 'code_execution_tool_result') {
-    const content = block.content as { return_code?: number; error_code?: string; stderr?: string };
+    const content = block.content as { return_code?: number; error_code?: string };
     if (content?.error_code) return { output: `failed: ${content.error_code}`, isError: true };
     if (content?.return_code && content.return_code !== 0) {
       return { output: `exit ${content.return_code}`, isError: true };
@@ -183,13 +171,16 @@ function summarizeServerToolResult(block: Anthropic.Beta.BetaContentBlock): { ou
     return { output: 'executed', isError: false };
   }
 
+  if (block.type === 'mcp_tool_result') {
+    return { output: block.is_error ? 'mcp call failed' : 'done', isError: Boolean(block.is_error) };
+  }
+
   return { output: 'done', isError: false };
 }
 
 /**
- * One-shot, non-streaming completion with no tools and no thinking. Used for
- * the party engine's speaker-decision request, where we want a short, cheap
- * answer rather than a conversational turn.
+ * One-shot, non-streaming completion with no tools and no thinking. Used for the
+ * party engine's speaker-decision request, where we want a short, cheap answer.
  */
 export async function completeOnce(opts: {
   apiKey: string;
@@ -206,7 +197,6 @@ export async function completeOnce(opts: {
       model: model.apiModel,
       max_tokens: maxTokens,
       messages: [{ role: 'user', content: prompt }],
-      // Thinking would dominate the token budget on what is a one-line answer.
       ...(model.supportsThinking ? { thinking: { type: 'disabled' as const } } : {}),
     },
     { signal },
@@ -224,9 +214,11 @@ export async function streamAssistantTurn(opts: {
   model: ModelDef;
   systemPrompt: string;
   thinkingEnabled: boolean;
+  effort: Effort;
   tools: ToolsEnabled;
-  /** Whether an image-provider key is configured; gates the image tool. */
-  imageToolAvailable: boolean;
+  /** Tools Darkwords runs itself, in the browser. */
+  clientTools: ClientTool[];
+  mcpServers: McpServer[];
   history: ApiMessage[];
   callbacks: StreamCallbacks;
   signal?: AbortSignal;
@@ -236,8 +228,10 @@ export async function streamAssistantTurn(opts: {
     model,
     systemPrompt,
     thinkingEnabled,
+    effort,
     tools,
-    imageToolAvailable,
+    clientTools,
+    mcpServers,
     history,
     callbacks,
     signal,
@@ -250,9 +244,11 @@ export async function streamAssistantTurn(opts: {
     content: toApiContent(m, tools.files),
   }));
 
-  const toolDefs = buildTools(tools, model, imageToolAvailable);
+  const activeMcp = mcpServers.filter((s) => s.enabled);
+  const toolDefs = buildTools(tools, model, clientTools, mcpServers);
   const useThinking = thinkingEnabled && model.supportsThinking;
   const system = `${systemPrompt}${buildToolInstructions(toolDefs)}`;
+  const byName = new Map(clientTools.map((t) => [t.name, t]));
 
   for (let round = 0; round < MAX_TOOL_ROUNDTRIPS; round++) {
     const params: Anthropic.Beta.MessageCreateParamsStreaming = {
@@ -262,13 +258,24 @@ export async function streamAssistantTurn(opts: {
       messages,
       stream: true,
       ...(toolDefs.length ? { tools: toolDefs } : {}),
+      ...(activeMcp.length
+        ? {
+            betas: [MCP_BETA],
+            mcp_servers: activeMcp.map((s) => ({
+              type: 'url' as const,
+              name: s.name,
+              url: s.url,
+              ...(s.authToken ? { authorization_token: s.authToken } : {}),
+            })),
+          }
+        : {}),
       ...(useThinking
         ? {
             // Adaptive thinking is the only supported mode on current models;
-            // `budget_tokens` and `temperature` are rejected outright. Thinking
-            // text is omitted by default, so opt in to summaries explicitly.
+            // budget_tokens and temperature are rejected. Thinking text is
+            // omitted by default, so opt into summaries explicitly.
             thinking: { type: 'adaptive' as const, display: 'summarized' as const },
-            output_config: { effort: model.effort },
+            output_config: { effort },
           }
         : {}),
     };
@@ -278,7 +285,7 @@ export async function streamAssistantTurn(opts: {
     stream.on('thinking', (delta) => callbacks.onThinkingDelta?.(delta));
     stream.on('text', (delta) => callbacks.onTextDelta?.(delta));
     stream.on('contentBlock', (block) => {
-      if (block.type === 'server_tool_use') {
+      if (block.type === 'server_tool_use' || block.type === 'mcp_tool_use') {
         callbacks.onToolCall?.({
           id: block.id,
           name: block.name,
@@ -305,7 +312,7 @@ export async function streamAssistantTurn(opts: {
     }
 
     // A server-side tool hit its internal iteration cap. Echo the turn back and
-    // re-send so the model can resume, otherwise the answer is silently cut off.
+    // re-send so the model can resume; otherwise the answer is silently cut off.
     if (finalMessage.stop_reason === 'pause_turn') {
       messages.push({ role: 'assistant', content: finalMessage.content });
       continue;
@@ -313,53 +320,47 @@ export async function streamAssistantTurn(opts: {
 
     if (finalMessage.stop_reason !== 'tool_use') return;
 
-    const imageCalls = finalMessage.content.filter(
-      (b): b is Anthropic.Beta.BetaToolUseBlock => b.type === 'tool_use' && b.name === IMAGE_TOOL_NAME,
+    const calls = finalMessage.content.filter(
+      (b): b is Anthropic.Beta.BetaToolUseBlock => b.type === 'tool_use' && byName.has(b.name),
     );
 
-    // `tool_use` with nothing we can service would loop forever — bail out.
-    if (imageCalls.length === 0) return;
+    // A tool_use we can't service would loop forever — bail rather than spin.
+    if (!calls.length) return;
 
     messages.push({ role: 'assistant', content: finalMessage.content });
 
-    const resultBlocks: ContentBlockParam[] = [];
-    for (const call of imageCalls) {
-      const input = call.input as { prompt?: string } | undefined;
-      const prompt = input?.prompt ?? '';
+    const results: ContentBlockParam[] = [];
+    for (const call of calls) {
+      const tool = byName.get(call.name)!;
+      const input = (call.input ?? {}) as Record<string, unknown>;
 
-      callbacks.onToolCall?.({ id: call.id, name: IMAGE_TOOL_NAME, input: `prompt: “${prompt}”` });
+      callbacks.onToolCall?.({ id: call.id, name: call.name, input: JSON.stringify(input) });
 
-      const result = (await callbacks.onImageRequested?.(prompt)) ?? {
-        ok: false as const,
-        error: 'Image generation is not available in this client.',
-      };
-
-      if (result.ok) {
-        callbacks.onToolResult?.({ id: call.id, output: 'image delivered to Gallery' });
-        resultBlocks.push({
-          type: 'tool_result',
-          tool_use_id: call.id,
-          content: [
-            {
-              type: 'text',
-              text: `Image generated successfully and shown to the user in the Gallery.${
-                result.note ? ` The image model revised the prompt to: “${result.note}”.` : ''
-              } Do not describe the image as if you can see it; you cannot.`,
-            },
-          ],
-        });
-      } else {
-        callbacks.onToolResult?.({ id: call.id, output: result.error, isError: true });
-        resultBlocks.push({
-          type: 'tool_result',
-          tool_use_id: call.id,
-          is_error: true,
-          content: [{ type: 'text', text: `Image generation failed: ${result.error}` }],
-        });
+      let output: string;
+      let isError = false;
+      try {
+        output = await tool.run(input, signal);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        isError = true;
+        output = `Error: ${err instanceof Error ? err.message : String(err)}`;
       }
+
+      callbacks.onToolResult?.({
+        id: call.id,
+        output: isError ? output : (tool.summarize?.(input, output) ?? 'done'),
+        isError,
+      });
+
+      results.push({
+        type: 'tool_result',
+        tool_use_id: call.id,
+        ...(isError ? { is_error: true } : {}),
+        content: [{ type: 'text', text: output }],
+      });
     }
 
-    messages.push({ role: 'user', content: resultBlocks });
+    messages.push({ role: 'user', content: results });
   }
 
   callbacks.onError?.(`Stopped after ${MAX_TOOL_ROUNDTRIPS} tool rounds without a final answer.`);

@@ -5,19 +5,31 @@
   z-index: 39;
 }
 
+/* Sits flush against the icon rail, which is on the left. */
 .panel {
   position: absolute;
   top: 0;
-  right: 0;
+  left: 68px;
   bottom: 0;
   width: 420px;
-  max-width: 88vw;
+  max-width: calc(100vw - 68px);
   background: var(--panel-bg);
-  border-left: 1px solid var(--panel-border);
+  border-right: 1px solid var(--panel-border);
   z-index: 40;
   display: flex;
   flex-direction: column;
-  animation: dw-in .22s ease;
+  animation: dw-slide-in .22s ease;
+}
+
+@keyframes dw-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .header {

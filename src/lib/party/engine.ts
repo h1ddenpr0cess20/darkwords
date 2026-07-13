@@ -31,7 +31,9 @@ const HISTORY_BUFFER_LIMIT = 12;
 
 /** A transcript line as the engine sees it. */
 export interface TranscriptLine {
-  /** Speaker name — a character's name, or the observer's name for the user. */
+  role: 'user' | 'assistant';
+  /** The speaking character's name. Ignored for user lines — the engine labels
+   * those with the configured observer name. */
   name: string;
   text: string;
 }
@@ -278,7 +280,7 @@ class PartyEngine {
   private seedHistory(): string[] {
     const lines = (this.host?.readTranscript() ?? [])
       .filter((l) => l.text.trim())
-      .map((l) => `${l.name}: ${l.text.trim()}`);
+      .map((l) => `${l.role === 'user' ? this.userName : l.name || 'Speaker'}: ${l.text.trim()}`);
     return lines.slice(-HISTORY_BUFFER_LIMIT);
   }
 

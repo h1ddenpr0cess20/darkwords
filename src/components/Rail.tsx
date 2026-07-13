@@ -50,12 +50,12 @@ function SettingsIcon() {
 export function Rail() {
   const { accent, accentBg } = useAccent();
   const activePanel = useAppStore((s) => s.activePanel);
-  const partyMode = useAppStore((s) => s.partyMode);
+  const partyStatus = useAppStore((s) => s.partyStatus);
   const closePanel = useAppStore((s) => s.closePanel);
   const openHistory = useAppStore((s) => s.openHistory);
   const openGallery = useAppStore((s) => s.openGallery);
   const openSettings = useAppStore((s) => s.openSettings);
-  const togglePartyMode = useAppStore((s) => s.togglePartyMode);
+  const openParty = useAppStore((s) => s.openParty);
   const modelPickerOpen = useAppStore((s) => s.modelPickerOpen);
   const toggleModelPicker = useAppStore((s) => s.toggleModelPicker);
   const selectedModelId = useAppStore((s) => s.selectedModelId);
@@ -85,7 +85,11 @@ export function Rail() {
       <button onClick={openGallery} title="Gallery" className={`${styles.iconBtn} ${activePanel === 'gallery' ? styles.active : ''}`}>
         <GalleryIcon />
       </button>
-      <button onClick={togglePartyMode} title="Party mode" className={`${styles.iconBtn} ${partyMode ? styles.active : ''}`}>
+      <button
+        onClick={openParty}
+        title="Party mode"
+        className={`${styles.iconBtn} ${partyStatus !== 'off' ? styles.active : ''}`}
+      >
         <PartyIcon />
       </button>
 

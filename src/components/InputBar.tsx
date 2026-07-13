@@ -2,6 +2,7 @@ import { useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { useAccent } from '../lib/theme';
 import { makeId } from '../lib/id';
+import { PartyBar } from './PartyBar';
 import styles from './InputBar.module.css';
 
 function readFileAsAttachment(file: File): Promise<{ id: string; name: string; mimeType: string; size: number; dataUrl: string }> {
@@ -60,6 +61,7 @@ export function InputBar() {
   return (
     <div className={styles.wrap}>
       <div className={styles.inner}>
+        <PartyBar />
         {uploads.length > 0 && (
           <div className={styles.uploads}>
             {uploads.map((u) => (

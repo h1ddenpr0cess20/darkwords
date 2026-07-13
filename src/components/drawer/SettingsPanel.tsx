@@ -2,8 +2,16 @@ import type { CSSProperties } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { MODELS, THEMES } from '../../lib/config';
 import { IMAGE_MODEL } from '../../lib/images';
-import type { SettingsTab, ToolsEnabled } from '../../types';
+import { PartyForm } from './PartyForm';
+import type { PromptMode, SettingsTab, ToolsEnabled } from '../../types';
 import styles from './SettingsPanel.module.css';
+
+const PROMPT_MODES: { key: PromptMode; label: string }[] = [
+  { key: 'personality', label: 'Personality' },
+  { key: 'custom', label: 'Custom' },
+  { key: 'none', label: 'None' },
+  { key: 'party', label: 'Party' },
+];
 
 const TABS: { key: SettingsTab; label: string }[] = [
   { key: 'model', label: 'Model' },
@@ -29,8 +37,15 @@ export function SettingsPanel() {
   const toggleTool = useAppStore((s) => s.toggleTool);
   const themeId = useAppStore((s) => s.themeId);
   const setTheme = useAppStore((s) => s.setTheme);
-  const personalityText = useAppStore((s) => s.personalityText);
-  const setPersonality = useAppStore((s) => s.setPersonality);
+  const promptMode = useAppStore((s) => s.promptMode);
+  const setPromptMode = useAppStore((s) => s.setPromptMode);
+  const personalityName = useAppStore((s) => s.personalityName);
+  const setPersonalityName = useAppStore((s) => s.setPersonalityName);
+  const customPrompt = useAppStore((s) => s.customPrompt);
+  const setCustomPrompt = useAppStore((s) => s.setCustomPrompt);
+  const verbose = useAppStore((s) => s.verbose);
+  const toggleVerbose = useAppStore((s) => s.toggleVerbose);
+  const resetPersonality = useAppStore((s) => s.resetPersonality);
   const apiKey = useAppStore((s) => s.apiKey);
   const setApiKey = useAppStore((s) => s.setApiKey);
   const imageApiKey = useAppStore((s) => s.imageApiKey);
@@ -97,15 +112,76 @@ export function SettingsPanel() {
         )}
 
         {panelTab === 'personality' && (
-          <div className={styles.section}>
-            <div className={styles.sectionLabel}>SYSTEM PROMPT</div>
-            <textarea
-              className={styles.textarea}
-              rows={7}
-              value={personalityText}
-              onChange={(e) => setPersonality(e.target.value)}
-            />
-          </div>
+          <>
+            <div className={styles.section}>
+              <div className={styles.sectionLabel}>PROMPT MODE</div>
+              <div className={styles.modeRow}>
+                {PROMPT_MODES.map((m) => (
+                  <button
+                    key={m.key}
+                    className={`${styles.modeBtn} ${promptMode === m.key ? styles.modeBtnOn : ''}`}
+                    onClick={() => setPromptMode(m.key)}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {promptMode === 'personality' && (
+              <div className={styles.section}>
+                <div className={styles.sectionLabel}>PERSONALITY</div>
+                <input
+                  className={styles.apiInput}
+                  value={personalityName}
+                  onChange={(e) => setPersonalityName(e.target.value)}
+                  placeholder="e.g. a sarcastic pirate captain"
+                />
+                <p className={styles.info}>
+                  Anything goes: a character, a description, an emoji, an abstract concept. The system prompt becomes
+                  “Assume the personality of [this]. Roleplay and never break character.”
+                </p>
+
+                <div className={styles.toolRow}>
+                  <span className={styles.toolText}>
+                    <span className={styles.toolLabel}>Verbose mode</span>
+                    <span className={styles.toolHint}>Drop the “keep responses short” guideline</span>
+                  </span>
+                  <button className={`${styles.switch} ${verbose ? styles.on : ''}`} onClick={toggleVerbose}>
+                    <span className={`${styles.switchKnob} ${verbose ? styles.on : ''}`} />
+                  </button>
+                </div>
+
+                <div className={styles.partyActions}>
+                  <button className={styles.secondaryBtn} onClick={resetPersonality}>
+                    Reset to default
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {promptMode === 'custom' && (
+              <div className={styles.section}>
+                <div className={styles.sectionLabel}>CUSTOM SYSTEM PROMPT</div>
+                <textarea
+                  className={styles.textarea}
+                  rows={8}
+                  value={customPrompt}
+                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  placeholder="Enter a complete system prompt…"
+                />
+                <p className={styles.info}>Sent verbatim as the system prompt.</p>
+              </div>
+            )}
+
+            {promptMode === 'none' && (
+              <div className={styles.section}>
+                <p className={styles.info}>No system prompt will be sent to the model.</p>
+              </div>
+            )}
+
+            {promptMode === 'party' && <PartyForm />}
+          </>
         )}
 
         {panelTab === 'theme' && (

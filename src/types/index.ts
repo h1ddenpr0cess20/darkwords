@@ -67,14 +67,6 @@ export interface Conversation {
   updatedAt: number;
 }
 
-export interface Persona {
-  id: string;
-  name: string;
-  initial: string;
-  color: string;
-  systemPrompt: string;
-}
-
 export type ThemeId = 'ink' | 'ember' | 'dusk';
 
 export interface ThemeDef {

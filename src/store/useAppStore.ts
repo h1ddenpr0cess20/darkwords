@@ -8,24 +8,38 @@ import type {
   ModelDef,
   ModelId,
   PanelId,
-  Persona,
+  PromptMode,
   SettingsTab,
   ThemeId,
   ToolsEnabled,
 } from '../types';
-import { DEFAULT_PERSONALITY, MODELS, PERSONA_POOL } from '../lib/config';
+import { MODELS } from '../lib/config';
 import { makeId } from '../lib/id';
 import { parseBlocks, partsToPlainText } from '../lib/blocks';
-import { streamAssistantTurn, type ApiMessage, type ImageToolResult } from '../lib/anthropic';
+import {
+  completeOnce,
+  streamAssistantTurn,
+  type ApiMessage,
+  type ImageToolResult,
+} from '../lib/anthropic';
 import { generateImage, ImageGenError } from '../lib/images';
+import { buildSystemPrompt, DEFAULT_PERSONALITY_NAME } from '../lib/prompt';
+import { partyEngine, type PartyHost, type TranscriptLine } from '../lib/party/engine';
+import {
+  defaultPartyConfig,
+  type PartyCharacter,
+  type PartyConfig,
+  type PartyScenario,
+  type PartyStatus,
+  type PartyToolKey,
+} from '../lib/party/types';
 
 function nowTime(): string {
   return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-function messageToApiText(m: ChatMessage): string {
-  const text = m.rawText || partsToPlainText(m.parts);
-  return m.personaId && m.role === 'assistant' ? `[${m.displayName}] ${text}` : text;
+function messageText(m: ChatMessage): string {
+  return m.rawText || partsToPlainText(m.parts);
 }
 
 interface AppState {
@@ -39,13 +53,20 @@ interface AppState {
 
   selectedModelId: ModelId;
   themeId: ThemeId;
-  personalityText: string;
   toolsEnabled: ToolsEnabled;
   apiKey: string;
   imageApiKey: string;
 
-  partyMode: boolean;
-  activePersonaIds: string[];
+  // Prompt composition (Wordmark's prompt modes).
+  promptMode: PromptMode;
+  personalityName: string;
+  customPrompt: string;
+  verbose: boolean;
+
+  // Party mode.
+  partyDraft: PartyConfig;
+  partyStatus: PartyStatus;
+  activeParty: PartyConfig | null;
 
   input: string;
   pendingUploads: Attachment[];
@@ -60,6 +81,7 @@ interface AppState {
   openSettings: () => void;
   openHistory: () => void;
   openGallery: () => void;
+  openParty: () => void;
   closePanel: () => void;
   setPanelTab: (tab: SettingsTab) => void;
 
@@ -67,13 +89,26 @@ interface AppState {
   selectModel: (id: ModelId) => void;
   setTheme: (id: ThemeId) => void;
   toggleTool: (key: keyof ToolsEnabled) => void;
-  setPersonality: (text: string) => void;
   setApiKey: (key: string) => void;
   setImageApiKey: (key: string) => void;
 
-  togglePartyMode: () => void;
-  addPersona: () => void;
-  removePersona: (id: string) => void;
+  setPromptMode: (mode: PromptMode) => void;
+  setPersonalityName: (name: string) => void;
+  setCustomPrompt: (text: string) => void;
+  toggleVerbose: () => void;
+  resetPersonality: () => void;
+
+  setPartyUserName: (name: string) => void;
+  setPartyScenario: (patch: Partial<PartyScenario>) => void;
+  addPartyCharacter: () => void;
+  updatePartyCharacter: (id: string, patch: Partial<PartyCharacter>) => void;
+  removePartyCharacter: (id: string) => void;
+  togglePartyCharacterTool: (id: string, tool: PartyToolKey) => void;
+  startParty: () => void;
+  pauseParty: () => void;
+  resumeParty: () => void;
+  stopParty: () => void;
+  leaveParty: () => void;
 
   newConversation: () => void;
   selectConversation: (id: string) => void;
@@ -83,6 +118,9 @@ interface AppState {
   sendMessage: () => Promise<void>;
   stopStreaming: () => void;
 }
+
+/** Label colours handed out to new party characters, in order. */
+const CHARACTER_COLORS = ['#7EE787', '#E8B54D', '#8FB9FF', '#E88484', '#C99BFF', '#5FD9C4'];
 
 function emptyConversation(): Conversation {
   const id = makeId('conv');
@@ -117,6 +155,10 @@ function patchMessage(
   };
 }
 
+function dropMessage(c: Conversation, msgId: string): Conversation {
+  return { ...c, messages: c.messages.filter((m) => m.id !== msgId) };
+}
+
 /** Records a tool call, or updates it in place if we've already seen its id. */
 function upsertTool(m: ChatMessage, info: { id: string; name: string; input: string }): Partial<ChatMessage> {
   const existing = m.tools ?? [];
@@ -126,27 +168,21 @@ function upsertTool(m: ChatMessage, info: { id: string; name: string; input: str
   return { tools: [...existing, info] };
 }
 
-function resolveTool(
-  m: ChatMessage,
-  info: { id: string; output: string; isError?: boolean },
-): Partial<ChatMessage> {
+function resolveTool(m: ChatMessage, info: { id: string; output: string; isError?: boolean }): Partial<ChatMessage> {
   const existing = m.tools ?? [];
   if (!existing.length) return {};
-  // Server tool results carry the id of their tool_use; fall back to the most
-  // recent unresolved call when the id isn't echoed back.
+  // Server tool results carry their tool_use id; fall back to the most recent
+  // unresolved call when the id isn't echoed back.
   const target = existing.find((t) => t.id === info.id) ?? [...existing].reverse().find((t) => t.output === undefined);
   if (!target) return {};
   return {
-    tools: existing.map((t) =>
-      t.id === target.id ? { ...t, output: info.output, isError: info.isError } : t,
-    ),
+    tools: existing.map((t) => (t.id === target.id ? { ...t, output: info.output, isError: info.isError } : t)),
   };
 }
 
-// A brand-new install starts with one real, empty conversation.
 const firstConversation = emptyConversation();
 
-// Module-scoped: an in-flight request isn't app state worth persisting.
+// An in-flight request isn't app state worth persisting.
 let activeController: AbortController | null = null;
 
 export const useAppStore = create<AppState>()(
@@ -162,13 +198,18 @@ export const useAppStore = create<AppState>()(
 
       selectedModelId: 'opus',
       themeId: 'ink',
-      personalityText: DEFAULT_PERSONALITY,
       toolsEnabled: { web: true, code: true, files: true, image: false },
       apiKey: '',
       imageApiKey: '',
 
-      partyMode: false,
-      activePersonaIds: ['nyx', 'cato'],
+      promptMode: 'personality',
+      personalityName: DEFAULT_PERSONALITY_NAME,
+      customPrompt: '',
+      verbose: false,
+
+      partyDraft: defaultPartyConfig(),
+      partyStatus: 'off',
+      activeParty: null,
 
       input: '',
       pendingUploads: [],
@@ -183,6 +224,8 @@ export const useAppStore = create<AppState>()(
       openSettings: () => set({ activePanel: 'settings', panelTab: 'model' }),
       openHistory: () => set({ activePanel: 'history' }),
       openGallery: () => set({ activePanel: 'gallery' }),
+      // The rail's party button jumps straight to the party setup form.
+      openParty: () => set({ activePanel: 'settings', panelTab: 'personality', promptMode: 'party' }),
       closePanel: () => set({ activePanel: null, modelPickerOpen: false }),
       setPanelTab: (tab) => set({ panelTab: tab }),
 
@@ -190,17 +233,103 @@ export const useAppStore = create<AppState>()(
       selectModel: (id) => set({ selectedModelId: id, modelPickerOpen: false }),
       setTheme: (id) => set({ themeId: id }),
       toggleTool: (key) => set((s) => ({ toolsEnabled: { ...s.toolsEnabled, [key]: !s.toolsEnabled[key] } })),
-      setPersonality: (text) => set({ personalityText: text }),
       setApiKey: (key) => set({ apiKey: key.trim() }),
       setImageApiKey: (key) => set({ imageApiKey: key.trim() }),
 
-      togglePartyMode: () => set((s) => ({ partyMode: !s.partyMode })),
-      addPersona: () =>
+      setPromptMode: (mode) => set({ promptMode: mode }),
+      setPersonalityName: (name) => set({ personalityName: name }),
+      setCustomPrompt: (text) => set({ customPrompt: text }),
+      toggleVerbose: () => set((s) => ({ verbose: !s.verbose })),
+      resetPersonality: () => set({ personalityName: DEFAULT_PERSONALITY_NAME, verbose: false }),
+
+      setPartyUserName: (name) => set((s) => ({ partyDraft: { ...s.partyDraft, userName: name } })),
+      setPartyScenario: (patch) =>
+        set((s) => ({ partyDraft: { ...s.partyDraft, scenario: { ...s.partyDraft.scenario, ...patch } } })),
+
+      addPartyCharacter: () =>
         set((s) => {
-          const next = PERSONA_POOL.find((p) => !s.activePersonaIds.includes(p.id));
-          return next ? { activePersonaIds: [...s.activePersonaIds, next.id] } : {};
+          const character: PartyCharacter = {
+            id: makeId('pc'),
+            name: '',
+            persona: '',
+            color: CHARACTER_COLORS[s.partyDraft.characters.length % CHARACTER_COLORS.length],
+            allowedTools: [],
+          };
+          return { partyDraft: { ...s.partyDraft, characters: [...s.partyDraft.characters, character] } };
         }),
-      removePersona: (id) => set((s) => ({ activePersonaIds: s.activePersonaIds.filter((x) => x !== id) })),
+
+      updatePartyCharacter: (id, patch) =>
+        set((s) => ({
+          partyDraft: {
+            ...s.partyDraft,
+            characters: s.partyDraft.characters.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+          },
+        })),
+
+      removePartyCharacter: (id) =>
+        set((s) => ({
+          partyDraft: { ...s.partyDraft, characters: s.partyDraft.characters.filter((c) => c.id !== id) },
+        })),
+
+      togglePartyCharacterTool: (id, tool) =>
+        set((s) => ({
+          partyDraft: {
+            ...s.partyDraft,
+            characters: s.partyDraft.characters.map((c) =>
+              c.id === id
+                ? {
+                    ...c,
+                    allowedTools: c.allowedTools.includes(tool)
+                      ? c.allowedTools.filter((t) => t !== tool)
+                      : [...c.allowedTools, tool],
+                  }
+                : c,
+            ),
+          },
+        })),
+
+      startParty: () => {
+        const s = get();
+        const draft = s.partyDraft;
+        const cast = draft.characters.filter((c) => c.name.trim() || c.persona.trim());
+        if (cast.length < 2) return;
+
+        // A party always begins in a fresh conversation.
+        const convo = emptyConversation();
+        const scenario = draft.scenario;
+        convo.title = scenario.topic.trim()
+          ? `Party: ${scenario.topic.trim().slice(0, 48)}`
+          : `Party: ${cast.map((c) => c.name || 'Unnamed').join(', ').slice(0, 48)}`;
+
+        set((st) => ({
+          conversations: { ...st.conversations, [convo.id]: convo },
+          conversationOrder: [convo.id, ...st.conversationOrder],
+          activeConvoId: convo.id,
+          activePanel: null,
+          promptMode: 'party',
+        }));
+
+        void partyEngine.start({
+          ...draft,
+          characters: cast.map((c) => ({ ...c, name: c.name.trim() || c.persona.trim().slice(0, 24) })),
+        });
+      },
+
+      pauseParty: () => partyEngine.pause(),
+      resumeParty: () => {
+        // "Resume" means both un-pausing a live loop and restarting a stopped one.
+        if (partyEngine.isRunning()) {
+          partyEngine.resume();
+          return;
+        }
+        const config = partyEngine.activeConfig();
+        if (config) void partyEngine.start(config);
+      },
+      stopParty: () => partyEngine.stop(),
+      leaveParty: () => {
+        partyEngine.reset();
+        set({ promptMode: 'personality' });
+      },
 
       newConversation: () =>
         set((s) => {
@@ -219,8 +348,6 @@ export const useAppStore = create<AppState>()(
           const conversations = { ...s.conversations };
           delete conversations[id];
           let order = s.conversationOrder.filter((x) => x !== id);
-
-          // Never leave the app without a conversation to show.
           if (order.length === 0) {
             const c = emptyConversation();
             conversations[c.id] = c;
@@ -241,6 +368,10 @@ export const useAppStore = create<AppState>()(
         ),
 
       stopStreaming: () => {
+        if (get().activeParty) {
+          partyEngine.stop();
+          return;
+        }
         activeController?.abort();
         activeController = null;
       },
@@ -249,6 +380,14 @@ export const useAppStore = create<AppState>()(
         const state = get();
         const text = state.input.trim();
         if ((!text && state.pendingUploads.length === 0) || state.isSending) return;
+
+        // While a party is loaded, the input bar is an interjection channel — the
+        // engine owns the turn loop and never falls through to regular chat.
+        if (state.activeParty) {
+          set({ input: '' });
+          partyEngine.queueInterjection(text);
+          return;
+        }
 
         const convoId = state.activeConvoId;
         const model = MODELS.find((m) => m.id === state.selectedModelId) ?? MODELS[0];
@@ -271,7 +410,6 @@ export const useAppStore = create<AppState>()(
             const title = text || uploads[0]?.name || 'New conversation';
             return isFirst ? { ...withMsg, title: title.slice(0, 60) } : withMsg;
           });
-          // Uploaded images are real media — they belong in the Gallery.
           const newGallery: GalleryItem[] = uploads
             .filter((u) => u.mimeType.startsWith('image/') && u.dataUrl)
             .map((u) => ({
@@ -300,10 +438,7 @@ export const useAppStore = create<AppState>()(
                 attachments: [],
                 rawText: '',
                 parts: [
-                  {
-                    type: 'para',
-                    text: 'No Anthropic API key set. Add one in Settings → API Key to start chatting.',
-                  },
+                  { type: 'para', text: 'No Anthropic API key set. Add one in Settings → API Key to start chatting.' },
                 ],
                 error: 'missing_api_key',
               }),
@@ -312,38 +447,25 @@ export const useAppStore = create<AppState>()(
           return;
         }
 
-        const personas: (Persona | null)[] =
-          state.partyMode && state.activePersonaIds.length
-            ? state.activePersonaIds
-                .map((id) => PERSONA_POOL.find((p) => p.id === id))
-                .filter((p): p is Persona => Boolean(p))
-            : [null];
-
         const controller = new AbortController();
         activeController = controller;
         set({ isSending: true });
 
         try {
-          for (const persona of personas) {
-            if (controller.signal.aborted) break;
-            await runOneReply(convoId, persona, model, controller.signal);
-          }
+          await runReply(convoId, model, controller.signal);
         } finally {
           if (activeController === controller) activeController = null;
           set({ isSending: false });
         }
 
-        async function runOneReply(cid: string, persona: Persona | null, mdl: ModelDef, signal: AbortSignal) {
+        async function runReply(cid: string, mdl: ModelDef, signal: AbortSignal) {
           const assistantId = makeId('a');
-          const displayName = persona?.name ?? 'Claude';
           set((s) =>
             withConvo(s, cid, (c) =>
               appendMessage(c, {
                 id: assistantId,
                 role: 'assistant',
-                displayName,
-                personaId: persona?.id,
-                nameColor: persona?.color,
+                displayName: 'Claude',
                 time: nowTime(),
                 attachments: [],
                 rawText: '',
@@ -357,75 +479,23 @@ export const useAppStore = create<AppState>()(
           const convo = s0.conversations[cid];
           const history: ApiMessage[] = convo.messages
             .filter((m) => m.id !== assistantId && !m.error)
-            .map((m) => ({ role: m.role, text: messageToApiText(m), attachments: m.attachments }));
-
-          const systemPrompt = persona ? `${s0.personalityText}\n\n${persona.systemPrompt}` : s0.personalityText;
+            .map((m) => ({ role: m.role, text: messageText(m), attachments: m.attachments }));
 
           await streamAssistantTurn({
             apiKey: s0.apiKey,
             model: mdl,
-            systemPrompt,
+            systemPrompt: buildSystemPrompt({
+              mode: s0.promptMode,
+              personalityName: s0.personalityName,
+              customPrompt: s0.customPrompt,
+              verbose: s0.verbose,
+            }),
             thinkingEnabled: true,
             tools: s0.toolsEnabled,
             imageToolAvailable: Boolean(s0.imageApiKey),
             history,
             signal,
-            callbacks: {
-              onThinkingDelta: (delta) => {
-                set((s) =>
-                  withConvo(s, cid, (c) =>
-                    patchMessage(c, assistantId, (m) => ({ thinking: (m.thinking ?? '') + delta })),
-                  ),
-                );
-              },
-              onTextDelta: (delta) => {
-                set((s) =>
-                  withConvo(s, cid, (c) =>
-                    patchMessage(c, assistantId, (m) => {
-                      const rawText = m.rawText + delta;
-                      return { rawText, parts: [{ type: 'para', text: rawText }] };
-                    }),
-                  ),
-                );
-              },
-              onToolCall: (info) => {
-                set((s) => withConvo(s, cid, (c) => patchMessage(c, assistantId, (m) => upsertTool(m, info))));
-              },
-              onToolResult: (info) => {
-                set((s) => withConvo(s, cid, (c) => patchMessage(c, assistantId, (m) => resolveTool(m, info))));
-              },
-              onImageRequested: async (prompt): Promise<ImageToolResult> => {
-                try {
-                  const { dataUrl, revisedPrompt } = await generateImage({
-                    apiKey: get().imageApiKey,
-                    prompt,
-                    signal,
-                  });
-                  set((s) => ({
-                    ...withConvo(s, cid, (c) =>
-                      patchMessage(c, assistantId, (m) => ({
-                        imageGen: [...(m.imageGen ?? []), { src: dataUrl, label: prompt }],
-                      })),
-                    ),
-                    galleryItems: [
-                      { id: makeId('g'), label: prompt, kind: 'Generated' as const, src: dataUrl, createdAt: Date.now() },
-                      ...s.galleryItems,
-                    ],
-                  }));
-                  return { ok: true, dataUrl, note: revisedPrompt };
-                } catch (err) {
-                  if (err instanceof DOMException && err.name === 'AbortError') {
-                    return { ok: false, error: 'Cancelled by the user.' };
-                  }
-                  const message =
-                    err instanceof ImageGenError || err instanceof Error ? err.message : String(err);
-                  return { ok: false, error: message };
-                }
-              },
-              onError: (message) => {
-                set((s) => withConvo(s, cid, (c) => patchMessage(c, assistantId, { error: message })));
-              },
-            },
+            callbacks: streamCallbacks(cid, assistantId, signal),
           });
 
           set((s) =>
@@ -445,22 +515,24 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'darkwords-store',
-      version: 2,
+      version: 3,
       partialize: (s) => ({
         conversations: s.conversations,
         conversationOrder: s.conversationOrder,
         activeConvoId: s.activeConvoId,
         selectedModelId: s.selectedModelId,
         themeId: s.themeId,
-        personalityText: s.personalityText,
         toolsEnabled: s.toolsEnabled,
         apiKey: s.apiKey,
         imageApiKey: s.imageApiKey,
-        partyMode: s.partyMode,
-        activePersonaIds: s.activePersonaIds,
+        promptMode: s.promptMode === 'party' ? 'personality' : s.promptMode,
+        personalityName: s.personalityName,
+        customPrompt: s.customPrompt,
+        verbose: s.verbose,
         galleryItems: s.galleryItems,
       }),
-      // v1 stored mock seed data and hue-based placeholder art; drop it.
+      // Older versions stored mock seed data, hue-based placeholder art, and the
+      // hardcoded persona round-robin that party mode replaces.
       migrate: () => ({
         conversations: { [firstConversation.id]: firstConversation },
         conversationOrder: [firstConversation.id],
@@ -470,3 +542,193 @@ export const useAppStore = create<AppState>()(
     },
   ),
 );
+
+/**
+ * Streaming callbacks shared by ordinary chat and party turns — both stream into
+ * a message bubble and record tool calls and generated images the same way.
+ */
+function streamCallbacks(cid: string, messageId: string, signal: AbortSignal) {
+  const set = useAppStore.setState;
+  const get = useAppStore.getState;
+
+  return {
+    onThinkingDelta: (delta: string) => {
+      set((s) =>
+        withConvo(s as AppState, cid, (c) =>
+          patchMessage(c, messageId, (m) => ({ thinking: (m.thinking ?? '') + delta })),
+        ),
+      );
+    },
+    onTextDelta: (delta: string) => {
+      set((s) =>
+        withConvo(s as AppState, cid, (c) =>
+          patchMessage(c, messageId, (m) => {
+            const rawText = m.rawText + delta;
+            return { rawText, parts: [{ type: 'para' as const, text: rawText }] };
+          }),
+        ),
+      );
+    },
+    onToolCall: (info: { id: string; name: string; input: string }) => {
+      set((s) => withConvo(s as AppState, cid, (c) => patchMessage(c, messageId, (m) => upsertTool(m, info))));
+    },
+    onToolResult: (info: { id: string; output: string; isError?: boolean }) => {
+      set((s) => withConvo(s as AppState, cid, (c) => patchMessage(c, messageId, (m) => resolveTool(m, info))));
+    },
+    onImageRequested: async (prompt: string): Promise<ImageToolResult> => {
+      try {
+        const { dataUrl, revisedPrompt } = await generateImage({ apiKey: get().imageApiKey, prompt, signal });
+        set((s) => ({
+          ...withConvo(s as AppState, cid, (c) =>
+            patchMessage(c, messageId, (m) => ({ imageGen: [...(m.imageGen ?? []), { src: dataUrl, label: prompt }] })),
+          ),
+          galleryItems: [
+            { id: makeId('g'), label: prompt, kind: 'Generated' as const, src: dataUrl, createdAt: Date.now() },
+            ...(s as AppState).galleryItems,
+          ],
+        }));
+        return { ok: true, dataUrl, note: revisedPrompt };
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return { ok: false, error: 'Cancelled by the user.' };
+        }
+        return { ok: false, error: err instanceof ImageGenError || err instanceof Error ? err.message : String(err) };
+      }
+    },
+    onError: (message: string) => {
+      set((s) => withConvo(s as AppState, cid, (c) => patchMessage(c, messageId, { error: message })));
+    },
+  };
+}
+
+/**
+ * Bridges the party engine to the store. Registered once, at module load — the
+ * engine never imports the store, so there is no cycle.
+ */
+const host: PartyHost = {
+  createSpeakerMessage(character) {
+    const id = makeId('a');
+    const cid = useAppStore.getState().activeConvoId;
+    useAppStore.setState((s) =>
+      withConvo(s as AppState, cid, (c) =>
+        appendMessage(c, {
+          id,
+          role: 'assistant',
+          displayName: character.name,
+          personaId: character.id,
+          nameColor: character.color,
+          time: nowTime(),
+          attachments: [],
+          rawText: '',
+          parts: [],
+          streaming: true,
+        }),
+      ),
+    );
+    return id;
+  },
+
+  async streamTurn({ messageId, character, systemPrompt, prompt, signal }) {
+    const s = useAppStore.getState();
+    const cid = s.activeConvoId;
+    const model = MODELS.find((m) => m.id === s.selectedModelId) ?? MODELS[0];
+
+    // A character may only use the tools it was granted, and only those the app
+    // has switched on globally.
+    const tools: ToolsEnabled = {
+      web: s.toolsEnabled.web && character.allowedTools.includes('web'),
+      code: s.toolsEnabled.code && character.allowedTools.includes('code'),
+      image: s.toolsEnabled.image && character.allowedTools.includes('image'),
+      files: s.toolsEnabled.files && character.allowedTools.includes('files'),
+    };
+
+    await streamAssistantTurn({
+      apiKey: s.apiKey,
+      model,
+      systemPrompt,
+      thinkingEnabled: true,
+      tools,
+      imageToolAvailable: Boolean(s.imageApiKey),
+      history: [{ role: 'user', text: prompt }],
+      signal,
+      callbacks: streamCallbacks(cid, messageId, signal),
+    });
+
+    const message = useAppStore.getState().conversations[cid]?.messages.find((m) => m.id === messageId);
+    return message?.rawText ?? '';
+  },
+
+  finalizeMessage(messageId) {
+    const cid = useAppStore.getState().activeConvoId;
+    useAppStore.setState((s) =>
+      withConvo(s as AppState, cid, (c) =>
+        patchMessage(c, messageId, (m) => ({
+          streaming: false,
+          parts: m.rawText ? parseBlocks(m.rawText) : m.parts,
+        })),
+      ),
+    );
+  },
+
+  discardMessage(messageId) {
+    const cid = useAppStore.getState().activeConvoId;
+    useAppStore.setState((s) => withConvo(s as AppState, cid, (c) => dropMessage(c, messageId)));
+  },
+
+  recordUserBubble(text) {
+    const cid = useAppStore.getState().activeConvoId;
+    useAppStore.setState((s) =>
+      withConvo(s as AppState, cid, (c) =>
+        appendMessage(c, {
+          id: makeId('u'),
+          role: 'user',
+          displayName: 'You',
+          time: nowTime(),
+          attachments: [],
+          parts: [{ type: 'para', text }],
+          rawText: text,
+        }),
+      ),
+    );
+  },
+
+  readTranscript(): TranscriptLine[] {
+    const s = useAppStore.getState();
+    const convo = s.conversations[s.activeConvoId];
+    if (!convo) return [];
+    return convo.messages
+      .filter((m) => !m.error && !m.streaming)
+      .map((m) => ({ role: m.role, name: m.displayName, text: messageText(m) }));
+  },
+
+  async complete(prompt, signal) {
+    const s = useAppStore.getState();
+    const model = MODELS.find((m) => m.id === s.selectedModelId) ?? MODELS[0];
+    return completeOnce({ apiKey: s.apiKey, model, prompt, signal });
+  },
+
+  setStatus(status, config) {
+    useAppStore.setState({ partyStatus: status, activeParty: config });
+  },
+
+  onError(message) {
+    const s = useAppStore.getState();
+    const cid = s.activeConvoId;
+    useAppStore.setState((st) =>
+      withConvo(st as AppState, cid, (c) =>
+        appendMessage(c, {
+          id: makeId('a'),
+          role: 'assistant',
+          displayName: 'Darkwords',
+          time: nowTime(),
+          attachments: [],
+          rawText: '',
+          parts: [{ type: 'para', text: message }],
+          error: message,
+        }),
+      ),
+    );
+  },
+};
+
+partyEngine.setHost(host);

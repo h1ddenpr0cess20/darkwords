@@ -36,18 +36,33 @@
 }
 
 .thinkingText {
-  margin: 6px 0 0;
+  margin: 0;
   font-size: 12px;
   line-height: 1.6;
   color: var(--text-5);
 }
 
+.trace {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 7px;
+}
+
+/* Tool calls sit inside the reasoning disclosure, not beside it. */
 .tool {
-  border-left: 2px solid var(--accent-border);
-  padding-left: 11px;
   display: flex;
   flex-direction: column;
   gap: 3px;
+}
+
+.toolCount {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--text-6);
+  background: var(--row-bg-alt);
+  border-radius: 20px;
+  padding: 1px 5px;
 }
 
 .toolHead {

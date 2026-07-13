@@ -11,3 +11,40 @@
   line-height: 1.55;
   color: var(--text-1);
 }
+
+.wrap {
+  border: 1px solid var(--field-border);
+  border-radius: 9px;
+  overflow: hidden;
+  margin: 0 0 12px;
+  background: var(--row-bg-alt);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--field-border);
+}
+
+.lang {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-6);
+  text-transform: lowercase;
+}
+
+.copy {
+  background: none;
+  border: none;
+  color: var(--text-6);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.copy:hover {
+  color: var(--accent);
+}

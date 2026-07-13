@@ -10,7 +10,6 @@ export const MODELS: ModelDef[] = [
     supportsThinking: true,
     supportsProgrammaticTools: true,
     maxTokens: 16000,
-    effort: 'high',
   },
   {
     id: 'sonnet',
@@ -21,7 +20,6 @@ export const MODELS: ModelDef[] = [
     supportsThinking: true,
     supportsProgrammaticTools: true,
     maxTokens: 16000,
-    effort: 'high',
   },
   {
     id: 'haiku',
@@ -32,7 +30,6 @@ export const MODELS: ModelDef[] = [
     supportsThinking: false,
     supportsProgrammaticTools: false,
     maxTokens: 8192,
-    effort: 'low',
   },
 ];
 

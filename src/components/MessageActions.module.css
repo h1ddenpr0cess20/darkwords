@@ -1,0 +1,75 @@
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity .12s;
+}
+
+/* Revealed on hover so the feed stays clean while reading. */
+:global(.dw-row):hover .actions,
+.actions:focus-within {
+  opacity: 1;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-7);
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: color .12s, background .12s;
+}
+
+.btn:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--row-bg);
+}
+
+.btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.label {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+}
+
+.versions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.navBtn {
+  background: none;
+  border: none;
+  color: var(--text-6);
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 5px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.navBtn:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.navBtn:disabled {
+  opacity: .3;
+  cursor: not-allowed;
+}
+
+.count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-6);
+}

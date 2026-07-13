@@ -7,14 +7,20 @@ export function MarginAnnotations({ message }: { message: ChatMessage }) {
 
   const tools = message.tools ?? [];
   const images = message.imageGen ?? [];
-  if (!message.thinking && tools.length === 0 && images.length === 0) return null;
+  const hasTrace = Boolean(message.thinking) || tools.length > 0;
+  if (!hasTrace && images.length === 0) return null;
+
+  // Reasoning and the tool calls it led to are one trace, so they collapse
+  // together under a single disclosure.
+  const label = message.thinking ? 'reasoning' : 'tool calls';
 
   return (
     <div className={styles.margin}>
-      {message.thinking && (
+      {hasTrace && (
         <div className={styles.thinking}>
           <button className={styles.thinkingToggle} onClick={() => toggleThinking(message.id)}>
-            <span className={styles.thinkingLabel}>reasoning</span>
+            <span className={styles.thinkingLabel}>{label}</span>
+            {tools.length > 0 && <span className={styles.toolCount}>{tools.length}</span>}
             <svg
               width="9"
               height="9"
@@ -27,22 +33,27 @@ export function MarginAnnotations({ message }: { message: ChatMessage }) {
               <path d="M6 9l6 6 6-6" />
             </svg>
           </button>
-          {message.thinkingOpen && <p className={styles.thinkingText}>{message.thinking}</p>}
-        </div>
-      )}
 
-      {tools.map((tool) => (
-        <div key={tool.id} className={styles.tool}>
-          <div className={styles.toolHead}>
-            <span className={styles.toolDot} />
-            <span className={styles.toolName}>{tool.name}</span>
-          </div>
-          <span className={styles.toolInput}>{tool.input}</span>
-          {tool.output && (
-            <span className={tool.isError ? styles.toolError : styles.toolOutput}>{tool.output}</span>
+          {message.thinkingOpen && (
+            <div className={styles.trace}>
+              {message.thinking && <p className={styles.thinkingText}>{message.thinking}</p>}
+
+              {tools.map((tool) => (
+                <div key={tool.id} className={styles.tool}>
+                  <div className={styles.toolHead}>
+                    <span className={styles.toolDot} />
+                    <span className={styles.toolName}>{tool.name}</span>
+                  </div>
+                  <span className={styles.toolInput}>{tool.input}</span>
+                  {tool.output && (
+                    <span className={tool.isError ? styles.toolError : styles.toolOutput}>{tool.output}</span>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
-      ))}
+      )}
 
       {images.map((img, i) => (
         <div key={i} className={styles.imageGen}>

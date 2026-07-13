@@ -12,6 +12,7 @@ import type {
   ModelId,
   PanelId,
   PromptMode,
+  MessageVariant,
   SettingsTab,
   Skill,
   ThemeId,
@@ -65,8 +66,8 @@ interface AppState {
   customPrompt: string;
   verbose: boolean;
 
-  // Reasoning effort override (null = the model's default).
-  effort: Effort | null;
+  // How hard Claude thinks. Defaults to medium.
+  effort: Effort;
 
   // Memory.
   memoryEnabled: boolean;
@@ -106,7 +107,7 @@ interface AppState {
   setApiKey: (key: string) => void;
   setImageApiKey: (key: string) => void;
 
-  setEffort: (effort: Effort | null) => void;
+  setEffort: (effort: Effort) => void;
 
   toggleMemory: () => void;
   setMemoryLimit: (limit: number) => void;
@@ -148,6 +149,10 @@ interface AppState {
   selectConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
   toggleThinking: (msgId: string) => void;
+
+  regenerateMessage: (msgId: string) => Promise<void>;
+  branchFrom: (msgId: string) => void;
+  selectVariant: (msgId: string, index: number) => void;
 
   sendMessage: () => Promise<void>;
   stopStreaming: () => void;
@@ -236,7 +241,7 @@ export const useAppStore = create<AppState>()(
       apiKey: '',
       imageApiKey: '',
 
-      effort: null,
+      effort: 'medium',
       memoryEnabled: false,
       memoryLimit: 25,
       memories: [],
@@ -538,6 +543,131 @@ export const useAppStore = create<AppState>()(
         activeController = null;
       },
 
+      selectVariant: (msgId, index) =>
+        set((s) =>
+          withConvo(s, s.activeConvoId, (c) =>
+            patchMessage(
+              c,
+              msgId,
+              (m) => {
+                const variant = m.variants?.[index];
+                if (!variant) return {};
+                return { ...variant, variantIndex: index };
+              },
+              false,
+            ),
+          ),
+        ),
+
+      branchFrom: (msgId) => {
+        const s = get();
+        const source = s.conversations[s.activeConvoId];
+        if (!source) return;
+        const cut = source.messages.findIndex((m) => m.id === msgId);
+        if (cut < 0) return;
+
+        // A branch is a copy of the thread up to and including this message, so
+        // the original is left untouched and you can explore a different path.
+        const branch: Conversation = {
+          id: makeId('conv'),
+          title: `${source.title} (branch)`.slice(0, 60),
+          messages: source.messages.slice(0, cut + 1).map((m) => ({ ...m, id: makeId('m') })),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        set((st) => ({
+          conversations: { ...st.conversations, [branch.id]: branch },
+          conversationOrder: [branch.id, ...st.conversationOrder],
+          activeConvoId: branch.id,
+          activePanel: null,
+        }));
+      },
+
+      regenerateMessage: async (msgId) => {
+        const s = get();
+        if (s.isSending || s.activeParty) return;
+
+        const cid = s.activeConvoId;
+        const convo = s.conversations[cid];
+        const index = convo?.messages.findIndex((m) => m.id === msgId) ?? -1;
+        const target = index >= 0 ? convo.messages[index] : undefined;
+        if (!target || target.role !== 'assistant') return;
+
+        const model = MODELS.find((m) => m.id === s.selectedModelId) ?? MODELS[0];
+        if (!s.apiKey) return;
+
+        // Keep the answer being replaced as a version rather than destroying it.
+        const snapshot: MessageVariant = {
+          rawText: target.rawText,
+          parts: target.parts,
+          thinking: target.thinking,
+          tools: target.tools,
+          imageGen: target.imageGen,
+        };
+
+        set((st) =>
+          withConvo(st, cid, (c) =>
+            patchMessage(c, msgId, (m) => ({
+              variants: m.variants?.length ? m.variants : [snapshot],
+              rawText: '',
+              parts: [],
+              thinking: undefined,
+              tools: undefined,
+              imageGen: undefined,
+              error: undefined,
+              streaming: true,
+            })),
+          ),
+        );
+
+        const history: ApiMessage[] = convo.messages
+          .slice(0, index)
+          .filter((m) => !m.error)
+          .map((m) => ({ role: m.role, text: messageText(m), attachments: m.attachments }));
+
+        const controller = new AbortController();
+        activeController = controller;
+        set({ isSending: true });
+
+        try {
+          const s0 = get();
+          await streamAssistantTurn({
+            apiKey: s0.apiKey,
+            model,
+            systemPrompt: composeSystemPrompt(s0),
+            thinkingEnabled: true,
+            effort: s0.effort,
+            tools: s0.toolsEnabled,
+            clientTools: buildClientTools(s0, cid, msgId),
+            mcpServers: s0.mcpServers,
+            history,
+            signal: controller.signal,
+            callbacks: streamCallbacks(cid, msgId),
+          });
+        } finally {
+          if (activeController === controller) activeController = null;
+          set({ isSending: false });
+        }
+
+        set((st) =>
+          withConvo(st, cid, (c) =>
+            patchMessage(c, msgId, (m) => {
+              const parts = m.rawText ? parseBlocks(m.rawText) : m.parts;
+              const fresh: MessageVariant = {
+                rawText: m.rawText,
+                parts,
+                thinking: m.thinking,
+                tools: m.tools,
+                imageGen: m.imageGen,
+              };
+              const variants = [...(m.variants ?? []), fresh];
+              return { streaming: false, parts, variants, variantIndex: variants.length - 1 };
+            }),
+          ),
+        );
+      },
+
       sendMessage: async () => {
         const state = get();
         const text = state.input.trim();
@@ -648,7 +778,7 @@ export const useAppStore = create<AppState>()(
             model: mdl,
             systemPrompt: composeSystemPrompt(s0),
             thinkingEnabled: true,
-            effort: effectiveEffort(s0, mdl),
+            effort: s0.effort,
             tools: s0.toolsEnabled,
             clientTools: buildClientTools(s0, cid, assistantId),
             mcpServers: s0.mcpServers,
@@ -716,11 +846,6 @@ export const useAppStore = create<AppState>()(
     },
   ),
 );
-
-/** The effort actually sent: the user's override, else the model's default. */
-function effectiveEffort(s: AppState, model: ModelDef): Effort {
-  return s.effort ?? model.effort;
-}
 
 /**
  * The system prompt plus everything that hangs off it — stored memories and the
@@ -877,7 +1002,7 @@ const host: PartyHost = {
       model,
       systemPrompt,
       thinkingEnabled: true,
-      effort: effectiveEffort(s, model),
+      effort: s.effort,
       tools,
       clientTools: buildClientTools(s, cid, messageId, { image: tools.image }),
       mcpServers: s.mcpServers,

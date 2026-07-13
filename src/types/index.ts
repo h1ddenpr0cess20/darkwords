@@ -41,6 +41,15 @@ export interface CodePart {
 }
 export type ContentPart = ParagraphPart | HeadingPart | ListPart | CodePart;
 
+/** A prior answer kept when a message is regenerated. */
+export interface MessageVariant {
+  rawText: string;
+  parts: ContentPart[];
+  thinking?: string;
+  tools?: ToolCallInfo[];
+  imageGen?: ImageGenInfo[];
+}
+
 export interface ChatMessage {
   id: string;
   role: Role;
@@ -57,6 +66,9 @@ export interface ChatMessage {
   imageGen?: ImageGenInfo[];
   streaming?: boolean;
   error?: string;
+  /** Every version of this reply, oldest first. Present once regenerated. */
+  variants?: MessageVariant[];
+  variantIndex?: number;
 }
 
 export interface Conversation {
@@ -94,7 +106,6 @@ export interface ModelDef {
    */
   supportsProgrammaticTools: boolean;
   maxTokens: number;
-  effort: Effort;
 }
 
 export interface ToolsEnabled {

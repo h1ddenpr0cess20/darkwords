@@ -28,9 +28,8 @@ const TABS: { key: SettingsTab; label: string }[] = [
   { key: 'data', label: 'Data' },
 ];
 
-const EFFORTS: { key: Effort | null; label: string; hint: string }[] = [
-  { key: null, label: 'Default', hint: 'Whatever the selected model uses' },
-  { key: 'low', label: 'Low', hint: 'Fastest, cheapest; shallow reasoning' },
+const EFFORTS: { key: Effort; label: string; hint: string }[] = [
+  { key: 'low', label: 'Low', hint: 'Fastest and cheapest; shallow reasoning' },
   { key: 'medium', label: 'Medium', hint: 'Balanced' },
   { key: 'high', label: 'High', hint: 'Recommended for anything intelligence-sensitive' },
   { key: 'xhigh', label: 'X-High', hint: 'Best for hard coding and agentic work' },

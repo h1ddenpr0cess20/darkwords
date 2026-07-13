@@ -2,6 +2,8 @@ import type { CSSProperties } from 'react';
 import type { ChatMessage } from '../types';
 import { useAccent } from '../lib/theme';
 import { CodeBlock } from './CodeBlock';
+import { Markdown } from './Markdown';
+import { MessageActions } from './MessageActions';
 import { MarginAnnotations } from './MarginAnnotations';
 import styles from './MessageRow.module.css';
 
@@ -25,7 +27,7 @@ export function MessageRow({ message }: { message: ChatMessage }) {
   const rowVars = { '--accent': accent, '--accent-bg': accentBg, '--accent-border': `${accent}55` } as CSSProperties;
 
   return (
-    <div className={styles.row} style={rowVars}>
+    <div className={`${styles.row} dw-row`} style={rowVars}>
       <div className={styles.main}>
         <div className={styles.head}>
           <span className={styles.avatar} style={{ background: avatarBg, color: avatarColor }}>
@@ -49,20 +51,19 @@ export function MessageRow({ message }: { message: ChatMessage }) {
             </div>
           )}
 
-          {message.parts.map((part, i) => {
-            if (part.type === 'para') return <p key={i} className={styles.para}>{part.text}</p>;
-            if (part.type === 'heading') return <div key={i} className={styles.heading}>{part.text}</div>;
-            if (part.type === 'list') {
-              return (
-                <ul key={i} className={styles.list}>
-                  {part.items.map((item, j) => (
-                    <li key={j} className={styles.listItem}>{item}</li>
-                  ))}
-                </ul>
-              );
-            }
-            return <CodeBlock key={i} code={part.text} />;
-          })}
+          {message.rawText ? (
+            <Markdown text={message.rawText} />
+          ) : (
+            message.parts.map((part, i) =>
+              part.type === 'code' ? (
+                <CodeBlock key={i} code={part.text} />
+              ) : (
+                <p key={i} className={styles.para}>
+                  {part.type === 'list' ? part.items.join('\n') : part.text}
+                </p>
+              ),
+            )
+          )}
 
           {message.error && !message.streaming && message.parts.length === 0 && (
             <p className={styles.errorText}>{message.error}</p>
@@ -75,6 +76,8 @@ export function MessageRow({ message }: { message: ChatMessage }) {
               <span className={styles.dot} style={{ animationDelay: '.3s' }} />
             </div>
           )}
+
+          {!message.streaming && <MessageActions message={message} />}
         </div>
       </div>
 

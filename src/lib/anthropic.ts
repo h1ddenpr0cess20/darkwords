@@ -186,6 +186,39 @@ function summarizeServerToolResult(block: Anthropic.Beta.BetaContentBlock): { ou
   return { output: 'done', isError: false };
 }
 
+/**
+ * One-shot, non-streaming completion with no tools and no thinking. Used for
+ * the party engine's speaker-decision request, where we want a short, cheap
+ * answer rather than a conversational turn.
+ */
+export async function completeOnce(opts: {
+  apiKey: string;
+  model: ModelDef;
+  prompt: string;
+  maxTokens?: number;
+  signal?: AbortSignal;
+}): Promise<string> {
+  const { apiKey, model, prompt, maxTokens = 256, signal } = opts;
+  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+
+  const response = await client.messages.create(
+    {
+      model: model.apiModel,
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+      // Thinking would dominate the token budget on what is a one-line answer.
+      ...(model.supportsThinking ? { thinking: { type: 'disabled' as const } } : {}),
+    },
+    { signal },
+  );
+
+  return response.content
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map((b) => b.text)
+    .join('')
+    .trim();
+}
+
 export async function streamAssistantTurn(opts: {
   apiKey: string;
   model: ModelDef;

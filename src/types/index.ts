@@ -112,6 +112,9 @@ export interface ToolsEnabled {
   image: boolean;
 }
 
+/** How the system prompt is composed. Mirrors Wordmark's prompt modes. */
+export type PromptMode = 'personality' | 'custom' | 'none' | 'party';
+
 export type PanelId = 'settings' | 'history' | 'gallery' | null;
 export type SettingsTab = 'model' | 'tools' | 'personality' | 'theme' | 'apikeys';
 

@@ -107,11 +107,13 @@ function patchMessage(
   c: Conversation,
   msgId: string,
   patch: Partial<ChatMessage> | ((m: ChatMessage) => Partial<ChatMessage>),
+  /** View-only changes (e.g. expanding reasoning) must not re-sort History. */
+  touch = true,
 ): Conversation {
   return {
     ...c,
     messages: c.messages.map((m) => (m.id === msgId ? { ...m, ...(typeof patch === 'function' ? patch(m) : patch) } : m)),
-    updatedAt: Date.now(),
+    updatedAt: touch ? Date.now() : c.updatedAt,
   };
 }
 
@@ -233,7 +235,9 @@ export const useAppStore = create<AppState>()(
 
       toggleThinking: (msgId) =>
         set((s) =>
-          withConvo(s, s.activeConvoId, (c) => patchMessage(c, msgId, (m) => ({ thinkingOpen: !m.thinkingOpen }))),
+          withConvo(s, s.activeConvoId, (c) =>
+            patchMessage(c, msgId, (m) => ({ thinkingOpen: !m.thinkingOpen }), false),
+          ),
         ),
 
       stopStreaming: () => {

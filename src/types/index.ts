@@ -79,7 +79,15 @@ export interface Conversation {
   updatedAt: number;
 }
 
-export type ThemeId = 'ink' | 'ember' | 'dusk';
+export type ThemeId =
+  | 'ink'
+  | 'ember'
+  | 'dusk'
+  | 'slate'
+  | 'violet'
+  | 'crimson'
+  | 'rose'
+  | 'teal';
 
 export interface ThemeDef {
   id: ThemeId;

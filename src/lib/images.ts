@@ -71,7 +71,6 @@ export async function generateImage(opts: {
   const first = body.data?.[0];
   if (!first) throw new ImageGenError('Image API returned no image.');
 
-  // gpt-image models return base64 by default; fall back to a URL if one is sent.
   if (first.b64_json) {
     return { dataUrl: `data:image/png;base64,${first.b64_json}`, revisedPrompt: first.revised_prompt };
   }

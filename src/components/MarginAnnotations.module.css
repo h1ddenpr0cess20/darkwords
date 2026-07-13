@@ -100,25 +100,3 @@
   color: #E88484;
 }
 
-.imageGen {
-  border-left: 2px solid var(--accent-border);
-  padding-left: 11px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.imageTile {
-  width: 100%;
-  border-radius: 8px;
-  border: 1px solid var(--field-border);
-  display: block;
-  object-fit: cover;
-}
-
-.imageLabel {
-  font-size: 10.5px;
-  color: var(--text-5);
-  font-family: var(--font-mono);
-  line-height: 1.4;
-}

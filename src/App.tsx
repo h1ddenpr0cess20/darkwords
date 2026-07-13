@@ -4,6 +4,7 @@ import { TopStrip } from './components/TopStrip';
 import { Feed } from './components/Feed';
 import { InputBar } from './components/InputBar';
 import { Drawer } from './components/drawer/Drawer';
+import { Lightbox } from './components/Lightbox';
 import { useAccent } from './lib/theme';
 import styles from './App.module.css';
 
@@ -20,6 +21,7 @@ export function App() {
         <InputBar />
       </div>
       <Drawer />
+      <Lightbox />
     </div>
   );
 }

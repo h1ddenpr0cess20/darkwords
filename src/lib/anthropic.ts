@@ -30,8 +30,7 @@ function dataUrlToBase64(dataUrl: string): string {
 function base64ToText(base64: string): string | null {
   try {
     const bin = atob(base64);
-    // eslint-disable-next-line no-control-regex
-    if (/[\x00-\x08\x0e-\x1f]/.test(bin)) return null; // looks binary
+    if (/[\x00-\x08\x0e-\x1f]/.test(bin)) return null;
     return bin;
   } catch {
     return null;
@@ -41,8 +40,6 @@ function base64ToText(base64: string): string | null {
 type ContentBlockParam = Anthropic.Beta.BetaContentBlockParam;
 
 function attachmentToBlock(att: Attachment): ContentBlockParam {
-  // An attachment with no bytes would be rejected as an empty source, so
-  // describe it as text rather than sending it.
   if (!att.dataUrl) {
     return { type: 'text', text: `[attached file: ${att.name} — content unavailable]` };
   }
@@ -73,7 +70,6 @@ function toApiContent(m: ApiMessage, includeAttachments: boolean): ContentBlockP
     for (const att of m.attachments ?? []) blocks.push(attachmentToBlock(att));
   }
   if (m.text) blocks.push({ type: 'text', text: m.text });
-  // The API rejects an empty content array — never emit one.
   if (blocks.length === 0) blocks.push({ type: 'text', text: '(no content)' });
   return blocks;
 }
@@ -86,16 +82,9 @@ function buildTools(
 ): Anthropic.Beta.BetaToolUnion[] {
   const list: Anthropic.Beta.BetaToolUnion[] = [];
 
-  // Code execution is itself the programmatic-tool-calling surface, so a model
-  // without PTC can't run it at all.
   const codeEnabled = tools.code && model.supportsProgrammaticTools;
 
   if (tools.web) {
-    // web_search_20260209 filters results dynamically by running code under the
-    // hood. Declared next to an explicit code_execution tool, the model sees two
-    // execution environments and writes code for things it should just search.
-    // It also needs PTC, which Haiku lacks. Both cases fall back to the basic
-    // search tool, which has no hidden executor.
     const useBasicSearch = codeEnabled || !model.supportsProgrammaticTools;
     list.push(
       useBasicSearch
@@ -149,7 +138,6 @@ function buildToolInstructions(tools: Anthropic.Beta.BetaToolUnion[]): string {
 function summarizeServerToolResult(block: Anthropic.Beta.BetaContentBlock): { output: string; isError: boolean } {
   if (block.type === 'web_search_tool_result') {
     const content = block.content;
-    // On success `content` is a list of results; on failure it's an error object.
     if (Array.isArray(content)) {
       if (!content.length) return { output: 'no results', isError: false };
       const first = content[0] as { title?: string };
@@ -250,10 +238,6 @@ export async function streamAssistantTurn(opts: {
   const system = `${systemPrompt}${buildToolInstructions(toolDefs)}`;
   const byName = new Map(clientTools.map((t) => [t.name, t]));
 
-  // Every round streams into the same message, so text written before a tool
-  // call would otherwise run straight into the text written after it. Separate
-  // the two with a paragraph break, but only once the next round actually
-  // produces text — a trailing break on a round that says nothing looks wrong.
   let wroteText = false;
   let breakPending = false;
 
@@ -287,9 +271,6 @@ export async function streamAssistantTurn(opts: {
         : {}),
       ...(useThinking
         ? {
-            // Adaptive thinking is the only supported mode on current models;
-            // budget_tokens and temperature are rejected. Thinking text is
-            // omitted by default, so opt into summaries explicitly.
             thinking: { type: 'adaptive' as const, display: 'summarized' as const },
             output_config: { effort },
           }
@@ -311,7 +292,11 @@ export async function streamAssistantTurn(opts: {
         const { output, isError } = summarizeServerToolResult(block);
         const id = (block as { tool_use_id?: string }).tool_use_id ?? '';
         callbacks.onToolResult?.({ id, output, isError });
+      } else {
+        return;
       }
+
+      if (wroteText) breakPending = true;
     });
 
     let finalMessage: Anthropic.Beta.BetaMessage;
@@ -327,8 +312,6 @@ export async function streamAssistantTurn(opts: {
       return;
     }
 
-    // A server-side tool hit its internal iteration cap. Echo the turn back and
-    // re-send so the model can resume; otherwise the answer is silently cut off.
     if (finalMessage.stop_reason === 'pause_turn') {
       messages.push({ role: 'assistant', content: finalMessage.content });
       if (wroteText) breakPending = true;
@@ -341,7 +324,6 @@ export async function streamAssistantTurn(opts: {
       (b): b is Anthropic.Beta.BetaToolUseBlock => b.type === 'tool_use' && byName.has(b.name),
     );
 
-    // A tool_use we can't service would loop forever — bail rather than spin.
     if (!calls.length) return;
 
     messages.push({ role: 'assistant', content: finalMessage.content });

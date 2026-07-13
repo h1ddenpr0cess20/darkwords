@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { ChatMessage } from '../types';
+import { useAppStore } from '../store/useAppStore';
 import { useAccent } from '../lib/theme';
 import { CodeBlock } from './CodeBlock';
 import { Markdown } from './Markdown';
@@ -18,6 +19,7 @@ function FileIcon() {
 
 export function MessageRow({ message }: { message: ChatMessage }) {
   const { accent, accentBg } = useAccent();
+  const openLightbox = useAppStore((s) => s.openLightbox);
   const isUser = message.role === 'user';
   const nameColor = message.nameColor ?? (isUser ? 'var(--text-0)' : accent);
   const avatarBg = isUser ? 'var(--row-bg-alt)' : accentBg;
@@ -76,6 +78,19 @@ export function MessageRow({ message }: { message: ChatMessage }) {
               <span className={styles.dot} style={{ animationDelay: '.3s' }} />
             </div>
           )}
+
+          {(message.imageGen ?? []).map((img, i) => (
+            <figure key={i} className={styles.figure}>
+              <img
+                className={styles.image}
+                src={img.src}
+                alt={img.label}
+                loading="lazy"
+                onClick={() => openLightbox(img)}
+              />
+              <figcaption className={styles.caption}>{img.label}</figcaption>
+            </figure>
+          ))}
 
           {!message.streaming && <MessageActions message={message} />}
         </div>

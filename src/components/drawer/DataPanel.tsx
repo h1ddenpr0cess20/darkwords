@@ -1,5 +1,6 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { storageUsage } from '../../lib/idbStorage';
 import styles from './SettingsPanel.module.css';
 
 function formatBytes(bytes: number): string {
@@ -20,13 +21,10 @@ export function DataPanel() {
   const [status, setStatus] = useState('');
   const [confirmingClear, setConfirmingClear] = useState(false);
 
-  const used = (() => {
-    try {
-      return new Blob([localStorage.getItem('darkwords-store') ?? '']).size;
-    } catch {
-      return 0;
-    }
-  })();
+  const [used, setUsed] = useState(0);
+  useEffect(() => {
+    void storageUsage().then(setUsed);
+  }, [conversations, images]);
 
   const onExport = () => {
     const blob = new Blob([exportData()], { type: 'application/json' });

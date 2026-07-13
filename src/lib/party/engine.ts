@@ -117,7 +117,6 @@ class PartyEngine {
     const host = this.host;
     if (!host) return;
 
-    // Restarting: tear the previous loop down and wait for it to unwind.
     if (this.running) {
       this.abort = true;
       this.paused = false;
@@ -165,8 +164,6 @@ class PartyEngine {
 
         this.consumePendingInterjections();
 
-        // Re-pick if an interjection lands while we're deciding — it may change
-        // who should speak next (e.g. the observer named someone).
         let nextSpeaker: PartyCharacter | null = null;
         while (!this.abort && !nextSpeaker) {
           nextSpeaker = await this.chooseNextSpeaker(currentSpeaker);
@@ -266,8 +263,6 @@ class PartyEngine {
     this.publish();
   }
 
-  // --- internals ---
-
   private publish(): void {
     let status: PartyStatus = 'off';
     if (this.config) {
@@ -316,8 +311,6 @@ class PartyEngine {
       if (!aborted) throw err;
     }
 
-    // A turn that produced tokens is kept even if it was aborted — those tokens
-    // are already paid for.
     if (text.trim()) {
       host.finalizeMessage(messageId);
       this.recordHistoryEntry(speaker.name, text);
@@ -377,7 +370,6 @@ class PartyEngine {
       const match = this.characters.find((c) => c.name.toLowerCase() === candidate);
       if (match) return match;
     } catch {
-      // Fall through to a random pick — a failed decision must not stall the loop.
     }
 
     return this.pickRandomSpeaker(currentSpeaker.id);

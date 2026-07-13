@@ -6,12 +6,9 @@ export function MarginAnnotations({ message }: { message: ChatMessage }) {
   const toggleThinking = useAppStore((s) => s.toggleThinking);
 
   const tools = message.tools ?? [];
-  const images = message.imageGen ?? [];
   const hasTrace = Boolean(message.thinking) || tools.length > 0;
-  if (!hasTrace && images.length === 0) return null;
+  if (!hasTrace) return null;
 
-  // Reasoning and the tool calls it led to are one trace, so they collapse
-  // together under a single disclosure.
   const label = message.thinking ? 'reasoning' : 'tool calls';
 
   return (
@@ -54,13 +51,6 @@ export function MarginAnnotations({ message }: { message: ChatMessage }) {
           )}
         </div>
       )}
-
-      {images.map((img, i) => (
-        <div key={i} className={styles.imageGen}>
-          <img className={styles.imageTile} src={img.src} alt={img.label} loading="lazy" />
-          <span className={styles.imageLabel}>{img.label}</span>
-        </div>
-      ))}
     </div>
   );
 }

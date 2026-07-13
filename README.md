@@ -2,17 +2,13 @@
 
 A dark, editorial chat client for the Anthropic API — a port of [Wordmark](https://github.com/h1ddenpr0cess20/Wordmark)'s
 feature set onto Claude, with a new UI. Icon rail, manuscript-style feed with
-reasoning, tool calls and generated images as margin annotations, a floating
-input bar, and a left-hand drawer for Settings, History and a media Gallery.
-
-The design comes from `Darkwords.dc.html` (exported from Claude Design) — see
-`chats/chat1.md` for the original design conversation and `project/` for the
-prototype.
+reasoning and tool calls as margin annotations, a floating input bar, and a
+left-hand drawer for Settings, History and a media Gallery.
 
 ## Stack
 
 - React 19 + TypeScript, built with Vite
-- Zustand for state, persisted to `localStorage`
+- Zustand for state, persisted to IndexedDB
 - `@anthropic-ai/sdk`, called directly from the browser (no backend)
 - OpenAI Images API (`gpt-image-2`) for the image-generation tool
 

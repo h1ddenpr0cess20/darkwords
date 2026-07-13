@@ -18,8 +18,6 @@ export function Markdown({ text }: { text: string }) {
             const source = String(children).replace(/\n$/, '');
             const language = /language-(\w+)/.exec(className ?? '')?.[1];
 
-            // react-markdown hands fenced blocks a `language-*` class and wraps
-            // them in <pre>; anything else is inline.
             const isBlock = Boolean(language) || source.includes('\n');
             if (!isBlock) {
               return (
@@ -30,7 +28,6 @@ export function Markdown({ text }: { text: string }) {
             }
             return <CodeBlock code={source} language={language} />;
           },
-          // The <pre> is supplied by CodeBlock itself.
           pre: ({ children }) => <>{children}</>,
           a: ({ children, ...props }) => (
             <a {...props} target="_blank" rel="noreferrer noopener" className={styles.link}>

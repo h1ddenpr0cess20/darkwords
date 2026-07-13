@@ -3,6 +3,7 @@ import styles from './GalleryPanel.module.css';
 
 export function GalleryPanel() {
   const items = useAppStore((s) => s.galleryItems);
+  const openLightbox = useAppStore((s) => s.openLightbox);
 
   return (
     <div className={styles.wrap}>
@@ -13,12 +14,10 @@ export function GalleryPanel() {
       )}
       <div className={styles.grid}>
         {items.map((g) => (
-          <a
+          <button
             key={g.id}
             className={styles.tile}
-            href={g.src}
-            target="_blank"
-            rel="noreferrer"
+            onClick={() => openLightbox({ src: g.src, label: g.label })}
             title={g.label}
           >
             <img className={styles.image} src={g.src} alt={g.label} loading="lazy" />
@@ -26,7 +25,7 @@ export function GalleryPanel() {
               <span className={styles.kind}>{g.kind}</span>
               <span className={styles.label}>{g.label}</span>
             </div>
-          </a>
+          </button>
         ))}
       </div>
     </div>

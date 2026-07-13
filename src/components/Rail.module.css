@@ -72,6 +72,11 @@
   animation: dw-fade .15s ease;
 }
 
+@keyframes dw-fade {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .modelDropdownLabel {
   font-size: 10.5px;
   color: var(--text-6);

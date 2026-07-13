@@ -59,7 +59,7 @@ export function parseBlocks(raw: string): ContentPart[] {
         codeLines.push(lines[i]);
         i++;
       }
-      i++; // skip closing fence
+      i++;
       parts.push({ type: 'code', text: codeLines.join('\n') });
       continue;
     }

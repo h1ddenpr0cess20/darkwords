@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { idbStorage } from '../lib/idbStorage';
 import type {
   Attachment,
   ChatMessage,
@@ -60,25 +61,20 @@ interface AppState {
   apiKey: string;
   imageApiKey: string;
 
-  // Prompt composition (Wordmark's prompt modes).
   promptMode: PromptMode;
   personalityName: string;
   customPrompt: string;
   verbose: boolean;
 
-  // How hard Claude thinks. Defaults to medium.
   effort: Effort;
 
-  // Memory.
   memoryEnabled: boolean;
   memoryLimit: number;
   memories: Memory[];
 
-  // Skills + MCP servers.
   skills: Skill[];
   mcpServers: McpServer[];
 
-  // Party mode.
   partyDraft: PartyConfig;
   partyStatus: PartyStatus;
   activeParty: PartyConfig | null;
@@ -86,6 +82,9 @@ interface AppState {
   input: string;
   pendingUploads: Attachment[];
   galleryItems: GalleryItem[];
+
+  /** The image currently open full-size, if any. */
+  lightbox: { src: string; label: string } | null;
 
   isSending: boolean;
 
@@ -96,7 +95,8 @@ interface AppState {
   openSettings: () => void;
   openHistory: () => void;
   openGallery: () => void;
-  openParty: () => void;
+  openLightbox: (image: { src: string; label: string }) => void;
+  closeLightbox: () => void;
   closePanel: () => void;
   setPanelTab: (tab: SettingsTab) => void;
 
@@ -210,8 +210,6 @@ function upsertTool(m: ChatMessage, info: { id: string; name: string; input: str
 function resolveTool(m: ChatMessage, info: { id: string; output: string; isError?: boolean }): Partial<ChatMessage> {
   const existing = m.tools ?? [];
   if (!existing.length) return {};
-  // Server tool results carry their tool_use id; fall back to the most recent
-  // unresolved call when the id isn't echoed back.
   const target = existing.find((t) => t.id === info.id) ?? [...existing].reverse().find((t) => t.output === undefined);
   if (!target) return {};
   return {
@@ -221,8 +219,21 @@ function resolveTool(m: ChatMessage, info: { id: string; output: string; isError
 
 const firstConversation = emptyConversation();
 
-// An in-flight request isn't app state worth persisting.
 let activeController: AbortController | null = null;
+
+/**
+ * Tears down a running party and returns the state patch that goes with it.
+ *
+ * The engine writes each line into whatever conversation is active at the moment
+ * it writes, so a party only holds together while its own conversation stays
+ * open. Anything that changes the active conversation ends the party instead of
+ * letting its dialogue spill into an unrelated chat.
+ */
+function endRunningParty(): Partial<AppState> {
+  if (useAppStore.getState().partyStatus === 'off') return {};
+  partyEngine.reset();
+  return { promptMode: 'personality' };
+}
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -260,6 +271,7 @@ export const useAppStore = create<AppState>()(
       input: '',
       pendingUploads: [],
       galleryItems: [],
+      lightbox: null,
 
       isSending: false,
 
@@ -270,8 +282,8 @@ export const useAppStore = create<AppState>()(
       openSettings: () => set({ activePanel: 'settings', panelTab: 'model' }),
       openHistory: () => set({ activePanel: 'history' }),
       openGallery: () => set({ activePanel: 'gallery' }),
-      // The rail's party button jumps straight to the party setup form.
-      openParty: () => set({ activePanel: 'settings', panelTab: 'personality', promptMode: 'party' }),
+      openLightbox: (image) => set({ lightbox: image }),
+      closeLightbox: () => set({ lightbox: null }),
       closePanel: () => set({ activePanel: null, modelPickerOpen: false }),
       setPanelTab: (tab) => set({ panelTab: tab }),
 
@@ -288,7 +300,6 @@ export const useAppStore = create<AppState>()(
       setMemoryLimit: (limit) =>
         set((s) => {
           const next = Math.max(1, Math.floor(limit) || 1);
-          // Tightening the limit drops the oldest memories immediately.
           return { memoryLimit: next, memories: s.memories.slice(-next) };
         }),
       addMemory: (text) =>
@@ -305,7 +316,6 @@ export const useAppStore = create<AppState>()(
         set((s) => {
           const parsed = parseSkill(fileName, source);
           if (!parsed.content) return {};
-          // Re-importing a skill replaces it rather than duplicating it.
           const others = s.skills.filter((sk) => sk.name.toLowerCase() !== parsed.name.toLowerCase());
           return { skills: [...others, { id: makeId('skill'), ...parsed, enabled: true }] };
         }),
@@ -332,7 +342,6 @@ export const useAppStore = create<AppState>()(
 
       exportData: () => {
         const s = get();
-        // Keys are deliberately excluded — an export is a file that gets shared.
         return JSON.stringify(
           {
             exportedAt: new Date().toISOString(),
@@ -461,7 +470,6 @@ export const useAppStore = create<AppState>()(
         const cast = draft.characters.filter((c) => c.name.trim() || c.persona.trim());
         if (cast.length < 2) return;
 
-        // A party always begins in a fresh conversation.
         const convo = emptyConversation();
         const scenario = draft.scenario;
         convo.title = scenario.topic.trim()
@@ -484,7 +492,6 @@ export const useAppStore = create<AppState>()(
 
       pauseParty: () => partyEngine.pause(),
       resumeParty: () => {
-        // "Resume" means both un-pausing a live loop and restarting a stopped one.
         if (partyEngine.isRunning()) {
           partyEngine.resume();
           return;
@@ -498,19 +505,30 @@ export const useAppStore = create<AppState>()(
         set({ promptMode: 'personality' });
       },
 
-      newConversation: () =>
+      newConversation: () => {
+        const party = endRunningParty();
         set((s) => {
+          const current = s.conversations[s.activeConvoId];
+          if (current && current.messages.length === 0) {
+            return { ...party, activePanel: null };
+          }
           const c = emptyConversation();
           return {
+            ...party,
             conversations: { ...s.conversations, [c.id]: c },
             conversationOrder: [c.id, ...s.conversationOrder],
             activeConvoId: c.id,
             activePanel: null,
           };
-        }),
-      selectConversation: (id) => set({ activeConvoId: id, activePanel: null }),
+        });
+      },
+      selectConversation: (id) => {
+        const party = endRunningParty();
+        set({ ...party, activeConvoId: id, activePanel: null });
+      },
 
-      deleteConversation: (id) =>
+      deleteConversation: (id) => {
+        const party = get().activeConvoId === id ? endRunningParty() : {};
         set((s) => {
           const conversations = { ...s.conversations };
           delete conversations[id];
@@ -521,11 +539,13 @@ export const useAppStore = create<AppState>()(
             order = [c.id];
           }
           return {
+            ...party,
             conversations,
             conversationOrder: order,
             activeConvoId: s.activeConvoId === id ? order[0] : s.activeConvoId,
           };
-        }),
+        });
+      },
 
       toggleThinking: (msgId) =>
         set((s) =>
@@ -566,8 +586,6 @@ export const useAppStore = create<AppState>()(
         const cut = source.messages.findIndex((m) => m.id === msgId);
         if (cut < 0) return;
 
-        // A branch is a copy of the thread up to and including this message, so
-        // the original is left untouched and you can explore a different path.
         const branch: Conversation = {
           id: makeId('conv'),
           title: `${source.title} (branch)`.slice(0, 60),
@@ -597,7 +615,6 @@ export const useAppStore = create<AppState>()(
         const model = MODELS.find((m) => m.id === s.selectedModelId) ?? MODELS[0];
         if (!s.apiKey) return;
 
-        // Keep the answer being replaced as a version rather than destroying it.
         const snapshot: MessageVariant = {
           rawText: target.rawText,
           parts: target.parts,
@@ -645,27 +662,30 @@ export const useAppStore = create<AppState>()(
             signal: controller.signal,
             callbacks: streamCallbacks(cid, msgId),
           });
+        } catch (err) {
+          const text = err instanceof Error ? err.message : String(err);
+          set((st) => withConvo(st, cid, (c) => patchMessage(c, msgId, (m) => ({ error: m.error ?? text }))));
         } finally {
           if (activeController === controller) activeController = null;
           set({ isSending: false });
-        }
 
-        set((st) =>
-          withConvo(st, cid, (c) =>
-            patchMessage(c, msgId, (m) => {
-              const parts = m.rawText ? parseBlocks(m.rawText) : m.parts;
-              const fresh: MessageVariant = {
-                rawText: m.rawText,
-                parts,
-                thinking: m.thinking,
-                tools: m.tools,
-                imageGen: m.imageGen,
-              };
-              const variants = [...(m.variants ?? []), fresh];
-              return { streaming: false, parts, variants, variantIndex: variants.length - 1 };
-            }),
-          ),
-        );
+          set((st) =>
+            withConvo(st, cid, (c) =>
+              patchMessage(c, msgId, (m) => {
+                const parts = m.rawText ? parseBlocks(m.rawText) : m.parts;
+                const fresh: MessageVariant = {
+                  rawText: m.rawText,
+                  parts,
+                  thinking: m.thinking,
+                  tools: m.tools,
+                  imageGen: m.imageGen,
+                };
+                const variants = [...(m.variants ?? []), fresh];
+                return { streaming: false, parts, variants, variantIndex: variants.length - 1 };
+              }),
+            ),
+          );
+        }
       },
 
       sendMessage: async () => {
@@ -673,8 +693,6 @@ export const useAppStore = create<AppState>()(
         const text = state.input.trim();
         if ((!text && state.pendingUploads.length === 0) || state.isSending) return;
 
-        // While a party is loaded, the input bar is an interjection channel — the
-        // engine owns the turn loop and never falls through to regular chat.
         if (state.activeParty) {
           set({ input: '' });
           partyEngine.queueInterjection(text);
@@ -725,7 +743,7 @@ export const useAppStore = create<AppState>()(
               appendMessage(c, {
                 id: makeId('a'),
                 role: 'assistant',
-                displayName: 'Claude',
+                displayName: 'AI',
                 time: nowTime(),
                 attachments: [],
                 rawText: '',
@@ -757,7 +775,7 @@ export const useAppStore = create<AppState>()(
               appendMessage(c, {
                 id: assistantId,
                 role: 'assistant',
-                displayName: 'Claude',
+                displayName: 'AI',
                 time: nowTime(),
                 attachments: [],
                 rawText: '',
@@ -773,38 +791,46 @@ export const useAppStore = create<AppState>()(
             .filter((m) => m.id !== assistantId && !m.error)
             .map((m) => ({ role: m.role, text: messageText(m), attachments: m.attachments }));
 
-          await streamAssistantTurn({
-            apiKey: s0.apiKey,
-            model: mdl,
-            systemPrompt: composeSystemPrompt(s0),
-            thinkingEnabled: true,
-            effort: s0.effort,
-            tools: s0.toolsEnabled,
-            clientTools: buildClientTools(s0, cid, assistantId),
-            mcpServers: s0.mcpServers,
-            history,
-            signal,
-            callbacks: streamCallbacks(cid, assistantId),
-          });
-
-          set((s) =>
-            withConvo(s, cid, (c) =>
-              patchMessage(c, assistantId, (m) => ({
-                streaming: false,
-                parts: m.rawText
-                  ? parseBlocks(m.rawText)
-                  : m.error
-                    ? [{ type: 'para', text: `Error: ${m.error}` }]
-                    : m.parts,
-              })),
-            ),
-          );
+          try {
+            await streamAssistantTurn({
+              apiKey: s0.apiKey,
+              model: mdl,
+              systemPrompt: composeSystemPrompt(s0),
+              thinkingEnabled: true,
+              effort: s0.effort,
+              tools: s0.toolsEnabled,
+              clientTools: buildClientTools(s0, cid, assistantId),
+              mcpServers: s0.mcpServers,
+              history,
+              signal,
+              callbacks: streamCallbacks(cid, assistantId),
+            });
+          } catch (err) {
+            const text = err instanceof Error ? err.message : String(err);
+            set((s) =>
+              withConvo(s, cid, (c) => patchMessage(c, assistantId, (m) => ({ error: m.error ?? text }))),
+            );
+          } finally {
+            set((s) =>
+              withConvo(s, cid, (c) =>
+                patchMessage(c, assistantId, (m) => ({
+                  streaming: false,
+                  parts: m.rawText
+                    ? parseBlocks(m.rawText)
+                    : m.error
+                      ? [{ type: 'para', text: `Error: ${m.error}` }]
+                      : m.parts,
+                })),
+              ),
+            );
+          }
         }
       },
     }),
     {
       name: 'darkwords-store',
       version: 3,
+      storage: createJSONStorage(() => idbStorage),
       partialize: (s) => ({
         conversations: s.conversations,
         conversationOrder: s.conversationOrder,
@@ -829,9 +855,6 @@ export const useAppStore = create<AppState>()(
       migrate: (persisted, version) => {
         const state = (persisted ?? {}) as Record<string, unknown>;
 
-        // v1 shipped mock seed conversations and hue-based placeholder gallery
-        // art, neither of which survives. Everything else the user set — keys
-        // included — is theirs and must be carried across.
         if (version < 2) {
           return {
             ...state,
@@ -988,8 +1011,6 @@ const host: PartyHost = {
     const cid = s.activeConvoId;
     const model = MODELS.find((m) => m.id === s.selectedModelId) ?? MODELS[0];
 
-    // A character may only use the tools it was granted, and only those the app
-    // has switched on globally.
     const tools: ToolsEnabled = {
       web: s.toolsEnabled.web && character.allowedTools.includes('web'),
       code: s.toolsEnabled.code && character.allowedTools.includes('code'),

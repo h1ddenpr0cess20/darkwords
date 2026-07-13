@@ -28,16 +28,6 @@ function GalleryIcon() {
     </svg>
   );
 }
-function PartyIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 00-3-3.87" />
-      <path d="M16 3.13a4 4 0 010 7.75" />
-    </svg>
-  );
-}
 function SettingsIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -50,12 +40,10 @@ function SettingsIcon() {
 export function Rail() {
   const { accent, accentBg } = useAccent();
   const activePanel = useAppStore((s) => s.activePanel);
-  const partyStatus = useAppStore((s) => s.partyStatus);
-  const closePanel = useAppStore((s) => s.closePanel);
+  const newConversation = useAppStore((s) => s.newConversation);
   const openHistory = useAppStore((s) => s.openHistory);
   const openGallery = useAppStore((s) => s.openGallery);
   const openSettings = useAppStore((s) => s.openSettings);
-  const openParty = useAppStore((s) => s.openParty);
   const modelPickerOpen = useAppStore((s) => s.modelPickerOpen);
   const toggleModelPicker = useAppStore((s) => s.toggleModelPicker);
   const selectedModelId = useAppStore((s) => s.selectedModelId);
@@ -76,7 +64,7 @@ export function Rail() {
         />
       </svg>
 
-      <button onClick={closePanel} title="Conversation" className={styles.iconBtn}>
+      <button onClick={newConversation} title="New chat" className={styles.iconBtn}>
         <ChatIcon />
       </button>
       <button onClick={openHistory} title="History" className={`${styles.iconBtn} ${activePanel === 'history' ? styles.active : ''}`}>
@@ -84,13 +72,6 @@ export function Rail() {
       </button>
       <button onClick={openGallery} title="Gallery" className={`${styles.iconBtn} ${activePanel === 'gallery' ? styles.active : ''}`}>
         <GalleryIcon />
-      </button>
-      <button
-        onClick={openParty}
-        title="Party mode"
-        className={`${styles.iconBtn} ${partyStatus !== 'off' ? styles.active : ''}`}
-      >
-        <PartyIcon />
       </button>
 
       <div className={styles.spacer} />

@@ -17,7 +17,8 @@
   border: 1px solid var(--panel-border);
   overflow: hidden;
   display: block;
-  text-decoration: none;
+  padding: 0;
+  cursor: zoom-in;
   background: var(--row-bg-alt);
 }
 

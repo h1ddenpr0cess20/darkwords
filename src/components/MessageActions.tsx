@@ -54,7 +54,6 @@ export function MessageActions({ message }: { message: ChatMessage }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
     } catch {
-      // Clipboard is unavailable outside a secure context.
     }
   };
 

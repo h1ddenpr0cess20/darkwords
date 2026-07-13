@@ -41,7 +41,7 @@ export function buildCharacterSystemPrompt(character: PartyCharacter, tools: Par
       .map((tool) => (tool.description ? `${tool.displayName} — ${tool.description}` : tool.displayName))
       .join('; ');
     lines.push(
-      `You have access to these tools and should use them when they would help, rather than guessing or claiming you can't: ${list}.`,
+      `You have access to these tools: ${list}.`,
     );
     if (tools.some((tool) => tool.key === 'web')) {
       lines.push(

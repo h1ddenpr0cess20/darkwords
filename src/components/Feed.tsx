@@ -10,9 +10,6 @@ export function Feed() {
   const messages = useAppStore((s) => s.conversations[s.activeConvoId]?.messages ?? []);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Follow new output only while the reader is already at the bottom. Toggling a
-  // reasoning panel rewrites the message array too, and yanking the view away
-  // from the panel someone just opened is exactly the wrong response.
   const pinnedToBottom = useRef(true);
 
   const onScroll = () => {

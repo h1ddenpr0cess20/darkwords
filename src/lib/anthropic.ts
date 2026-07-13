@@ -85,12 +85,27 @@ function toApiContent(m: ApiMessage, includeAttachments: boolean): ContentBlockP
   return blocks;
 }
 
-function buildTools(tools: ToolsEnabled, imageToolAvailable: boolean): Anthropic.Beta.BetaToolUnion[] {
+function buildTools(
+  tools: ToolsEnabled,
+  model: ModelDef,
+  imageToolAvailable: boolean,
+): Anthropic.Beta.BetaToolUnion[] {
   const list: Anthropic.Beta.BetaToolUnion[] = [];
+
   if (tools.web) {
-    list.push({ type: 'web_search_20260209', name: 'web_search' });
+    // The dynamic-filtering search variant runs its filter code via programmatic
+    // tool calling. On a model without it (Haiku), the API rejects the request
+    // unless the tool is pinned to direct invocation.
+    list.push(
+      model.supportsProgrammaticTools
+        ? { type: 'web_search_20260209', name: 'web_search' }
+        : { type: 'web_search_20260209', name: 'web_search', allowed_callers: ['direct'] },
+    );
   }
-  if (tools.code) {
+
+  // Code execution is itself the programmatic-tool-calling surface; models
+  // without it can't run the tool at all.
+  if (tools.code && model.supportsProgrammaticTools) {
     list.push({ type: 'code_execution_20260521', name: 'code_execution' });
   }
   if (tools.image && imageToolAvailable) {
@@ -169,7 +184,7 @@ export async function streamAssistantTurn(opts: {
     content: toApiContent(m, tools.files),
   }));
 
-  const toolDefs = buildTools(tools, imageToolAvailable);
+  const toolDefs = buildTools(tools, model, imageToolAvailable);
   const useThinking = thinkingEnabled && model.supportsThinking;
 
   for (let round = 0; round < MAX_TOOL_ROUNDTRIPS; round++) {

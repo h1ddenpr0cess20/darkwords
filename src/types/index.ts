@@ -95,6 +95,12 @@ export interface ModelDef {
   blurb: string;
   /** Adaptive thinking + the `effort` control (not supported on Haiku). */
   supportsThinking: boolean;
+  /**
+   * Programmatic tool calling — Claude invoking tools from inside code
+   * execution. The dynamic-filtering web-search/fetch variants depend on it;
+   * models without it must pin tools to `allowed_callers: ["direct"]`.
+   */
+  supportsProgrammaticTools: boolean;
   maxTokens: number;
   effort: Effort;
 }

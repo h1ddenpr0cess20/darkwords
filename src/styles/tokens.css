@@ -1,0 +1,40 @@
+:root {
+  --bg: #121210;
+  --rail-bg: #0c0d0a;
+  --rail-border: #232420;
+  --panel-bg: #15160f;
+  --panel-border: #262720;
+  --row-bg: #191a15;
+  --row-border: #262720;
+  --row-bg-alt: #1e1f19;
+  --field-bg: #181914;
+  --field-border: #2a2b24;
+  --field-border-2: #2c2d26;
+  --code-bg: #0e0f0c;
+
+  --text-0: #ececea;
+  --text-1: #dedfd9;
+  --text-2: #c7c8c2;
+  --text-3: #9a9c95;
+  --text-4: #8d8f86;
+  --text-5: #75776d;
+  --text-6: #66685f;
+  --text-7: #5c5e55;
+  --text-8: #54564d;
+  --text-9: #3a3b34;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: 'Newsreader', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* accent themes */
+  --accent-ink: #7ee787;
+  --accent-ember: #e8b54d;
+  --accent-dusk: #8fb9ff;
+
+  /* persona palette (party mode) */
+  --persona-nyx: #7ee787;
+  --persona-cato: #e8b54d;
+  --persona-vex: #8fb9ff;
+  --persona-orin: #e88484;
+}

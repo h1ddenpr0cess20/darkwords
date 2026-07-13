@@ -1,0 +1,109 @@
+.margin {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.thinking {
+  border-left: 2px solid var(--text-9);
+  padding-left: 11px;
+}
+
+.thinkingToggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-5);
+}
+
+.thinkingLabel {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 12.5px;
+}
+
+.thinkingChevron {
+  transition: transform .15s;
+}
+
+.thinkingChevron.open {
+  transform: rotate(180deg);
+}
+
+.thinkingText {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-5);
+}
+
+.tool {
+  border-left: 2px solid var(--accent-border);
+  padding-left: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.toolHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.toolName {
+  font-size: 11.5px;
+  font-family: var(--font-mono);
+  color: var(--text-2);
+}
+
+.toolInput {
+  font-size: 11px;
+  color: var(--text-6);
+  font-family: var(--font-mono);
+}
+
+.toolOutput {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.toolError {
+  font-size: 11.5px;
+  color: #E88484;
+}
+
+.imageGen {
+  border-left: 2px solid var(--accent-border);
+  padding-left: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.imageTile {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--field-border);
+  display: block;
+  object-fit: cover;
+}
+
+.imageLabel {
+  font-size: 10.5px;
+  color: var(--text-5);
+  font-family: var(--font-mono);
+  line-height: 1.4;
+}

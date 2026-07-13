@@ -1,0 +1,119 @@
+export type Role = 'user' | 'assistant';
+
+export interface Attachment {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  /** base64 data URL — used for both preview and as an API content block */
+  dataUrl: string;
+}
+
+export interface ToolCallInfo {
+  id: string;
+  name: string;
+  input: string;
+  output?: string;
+  isError?: boolean;
+}
+
+export interface ImageGenInfo {
+  /** base64 data URL of the generated image */
+  src: string;
+  label: string;
+}
+
+export interface ParagraphPart {
+  type: 'para';
+  text: string;
+}
+export interface HeadingPart {
+  type: 'heading';
+  text: string;
+}
+export interface ListPart {
+  type: 'list';
+  items: string[];
+}
+export interface CodePart {
+  type: 'code';
+  text: string;
+}
+export type ContentPart = ParagraphPart | HeadingPart | ListPart | CodePart;
+
+export interface ChatMessage {
+  id: string;
+  role: Role;
+  displayName: string;
+  personaId?: string;
+  nameColor?: string;
+  time: string;
+  attachments: Attachment[];
+  parts: ContentPart[];
+  rawText: string;
+  thinking?: string;
+  thinkingOpen?: boolean;
+  tools?: ToolCallInfo[];
+  imageGen?: ImageGenInfo[];
+  streaming?: boolean;
+  error?: string;
+}
+
+export interface Conversation {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Persona {
+  id: string;
+  name: string;
+  initial: string;
+  color: string;
+  systemPrompt: string;
+}
+
+export type ThemeId = 'ink' | 'ember' | 'dusk';
+
+export interface ThemeDef {
+  id: ThemeId;
+  color: string;
+  label: string;
+}
+
+export type ModelId = 'opus' | 'sonnet' | 'haiku';
+
+export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
+export interface ModelDef {
+  id: ModelId;
+  apiModel: string;
+  name: string;
+  short: string;
+  blurb: string;
+  /** Adaptive thinking + the `effort` control (not supported on Haiku). */
+  supportsThinking: boolean;
+  maxTokens: number;
+  effort: Effort;
+}
+
+export interface ToolsEnabled {
+  web: boolean;
+  code: boolean;
+  files: boolean;
+  image: boolean;
+}
+
+export type PanelId = 'settings' | 'history' | 'gallery' | null;
+export type SettingsTab = 'model' | 'tools' | 'personality' | 'theme' | 'apikeys';
+
+export interface GalleryItem {
+  id: string;
+  label: string;
+  kind: 'Generated' | 'Uploaded';
+  /** base64 data URL — the actual image bytes */
+  src: string;
+  createdAt: number;
+}

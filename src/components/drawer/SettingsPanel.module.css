@@ -1,0 +1,222 @@
+.tabs {
+  flex: none;
+  display: flex;
+  gap: 4px;
+  padding: 14px 22px 0;
+  overflow-x: auto;
+}
+
+.tab {
+  flex: none;
+  background: var(--row-bg-alt);
+  color: var(--text-3);
+  border: none;
+  border-radius: 20px;
+  padding: 7px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 22px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  color: var(--text-5);
+  font-family: var(--font-mono);
+}
+
+.modelRow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: var(--row-bg);
+  border: 1px solid var(--row-border);
+  border-radius: 10px;
+  padding: 12px 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.modelRow.selected {
+  background: var(--accent-bg);
+  border-color: color-mix(in srgb, var(--accent) 53%, transparent);
+}
+
+.dot {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-9);
+  background: transparent;
+  flex: none;
+}
+
+.dot.selected {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rowName {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-0);
+  white-space: nowrap;
+}
+
+.rowBlurb {
+  font-size: 11.5px;
+  color: var(--text-5);
+  white-space: nowrap;
+}
+
+.toolRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--row-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 11px 13px;
+}
+
+.toolText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toolLabel {
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+.toolHint {
+  font-size: 11px;
+  color: var(--text-6);
+  line-height: 1.35;
+}
+
+.warn {
+  margin-top: 8px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #E8B54D;
+}
+
+.switch {
+  width: 36px;
+  height: 20px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  flex: none;
+  background: var(--field-border);
+}
+
+.switch.on {
+  background: var(--accent);
+}
+
+.switchKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0f100d;
+  transition: left .15s;
+}
+
+.switchKnob.on {
+  left: 18px;
+}
+
+.themeRow {
+  display: flex;
+  gap: 10px;
+}
+
+.themeBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  background: var(--row-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 14px 8px;
+  cursor: pointer;
+}
+
+.themeBtn.selected {
+  border-width: 1.5px;
+}
+
+.themeSwatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.themeLabel {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.textarea {
+  width: 100%;
+  background: var(--row-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--text-1);
+  font-size: 13px;
+  line-height: 1.55;
+  font-family: var(--font-sans);
+  resize: vertical;
+}
+
+.apiInput {
+  width: 100%;
+  background: var(--row-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 11px 13px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.hint {
+  font-size: 11.5px;
+  color: var(--text-6);
+}

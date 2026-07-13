@@ -1,0 +1,13 @@
+.feed {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 40px 140px;
+}
+
+.inner {
+  max-width: 920px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}

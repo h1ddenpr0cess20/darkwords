@@ -1,0 +1,13 @@
+.pre {
+  margin: 0;
+  background: var(--code-bg);
+  border: 1px solid var(--field-border);
+  border-radius: 9px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-1);
+}

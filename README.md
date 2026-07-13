@@ -1,21 +1,19 @@
 # Darkwords
 
-A dark, editorial chatbot UI for the Anthropic API. Icon rail, manuscript-style
-feed with margin annotations for reasoning / tool calls / generated images, a
-floating input bar, and a right-side drawer for Settings, History, and a media
-Gallery. Supports party mode (multiple named personas replying in sequence),
-streaming replies with adaptive thinking, web search, code execution, file
-attachments, and image generation.
+A dark, editorial chat client for the Anthropic API — a port of [Wordmark](https://github.com/h1ddenpr0cess20/Wordmark)'s
+feature set onto Claude, with a new UI. Icon rail, manuscript-style feed with
+reasoning, tool calls and generated images as margin annotations, a floating
+input bar, and a left-hand drawer for Settings, History and a media Gallery.
 
-This app is the implementation of the `Darkwords.dc.html` design exported from
-Claude Design — see `chats/chat1.md` for the original design conversation and
-`project/` for the source prototype.
+The design comes from `Darkwords.dc.html` (exported from Claude Design) — see
+`chats/chat1.md` for the original design conversation and `project/` for the
+prototype.
 
 ## Stack
 
 - React 19 + TypeScript, built with Vite
-- Zustand for state (persisted to `localStorage`)
-- `@anthropic-ai/sdk` calling the Anthropic API directly from the browser
+- Zustand for state, persisted to `localStorage`
+- `@anthropic-ai/sdk`, called directly from the browser (no backend)
 - OpenAI Images API (`gpt-image-2`) for the image-generation tool
 
 ## Running it
@@ -25,10 +23,10 @@ npm install
 npm run dev
 ```
 
-Open the app and go to **Settings → API Key**:
+Then open **Settings → Keys**:
 
 - **Anthropic key** (`sk-ant-…`) — required for chat.
-- **OpenAI key** (`sk-…`) — optional; only needed for image generation.
+- **OpenAI key** (`sk-…`) — optional; only for image generation.
 
 ```sh
 npm run build      # type-check + production build to dist/
@@ -36,45 +34,92 @@ npm run preview    # preview the production build
 npm run lint       # type-check only
 ```
 
-## Tools
+## Features
 
-| Tool | Runs where | Notes |
-| --- | --- | --- |
-| Web search | Anthropic's servers | `web_search_20260209` |
-| Code interpreter | Anthropic's servers | `code_execution_20260521`, sandboxed Python |
-| File attachments | — | Images and PDFs go up as native content blocks; text files are inlined |
-| Image generation | Your browser → OpenAI | Client-side tool: Claude calls `generate_image`, the app calls `gpt-image-2` and hands the result back |
+**Chat** — streaming replies with adaptive thinking, a collapsible reasoning
+panel, markdown and syntax-highlighted code, file attachments (images and PDFs
+as native content blocks, text files inlined), and a stop control.
 
-Anthropic's API has no image-generation endpoint, so image generation is a
-**client-side tool**: Claude decides to call it, the app fulfils the call
-against an external image model, and the resulting image is returned to Claude
-as a tool result and shown in the feed and Gallery. With no OpenAI key set, the
-tool is not offered to the model at all.
+**Party mode** — an autonomous multi-character group chat. Define a cast (name,
+persona, per-character tool grants) and a scenario (topic, setting, mood,
+conversation type), hit **Start party**, and the characters converse on their
+own. Type at any time to interject without pausing the loop; name a character
+and they take the next turn. Two characters alternate; three or more use a
+speaker-decision request to pick who speaks next. Pause, stop, and resume from
+the control bar above the input.
+
+**Tools**
+
+| Tool | Runs where |
+| --- | --- |
+| Web search | Anthropic's servers |
+| Code interpreter | Anthropic's servers (sandboxed Python) |
+| Image generation | Your browser → OpenAI `gpt-image-2` |
+| Memory (`remember` / `forget`) | Your browser |
+| Skills (`load_skill`) | Your browser |
+| MCP servers | Anthropic's MCP connector |
+
+Anthropic has no image-generation endpoint, so image generation is a
+*client-side* tool: Claude calls it, Darkwords fulfils the call against an
+external image model, and the result comes back as a tool result and lands in
+the feed and Gallery. With no OpenAI key set, the tool isn't offered to the
+model at all.
+
+**Memory** — Claude can save brief facts about you with the `remember` tool.
+They're kept to a FIFO limit and appended to the system prompt every turn. You
+can add, remove and clear them yourself in Settings → Memory.
+
+**Skills** — import `SKILL.md` instruction packages. Only each skill's name and
+description sit in the system prompt; Claude pulls the full body in with
+`load_skill` when a task matches, so a shelf of skills doesn't flood every
+request.
+
+**Prompt modes** — Personality (a name, wrapped in a roleplay instruction),
+Custom (a verbatim system prompt), None, or Party.
+
+**Reasoning effort** — `low` … `max`, overriding the model's default.
+
+**Everything is local** — conversations, gallery, memories, skills and keys all
+live in this browser's `localStorage`. Export and import the lot as JSON from
+Settings → Data (keys are deliberately excluded from exports).
+
+## Model capabilities
+
+Tool selection adapts to the model, because they don't all support the same
+things:
+
+- Haiku 4.5 has no extended thinking and no programmatic tool calling, so the
+  reasoning-effort control doesn't apply and the code interpreter is withheld.
+- `web_search_20260209` filters results by running code under the hood. Declared
+  next to an explicit `code_execution` tool it confuses the model into writing
+  code for things it should just search, so the basic `web_search_20250305` is
+  used whenever code execution is also on.
 
 ## Structure
 
 ```
 src/
-  components/       UI components (Rail, Feed, MessageRow, InputBar, Drawer/…)
-  store/            Zustand store — app state + the send/streaming orchestration
+  components/       Rail, TopStrip, Feed, MessageRow, InputBar, PartyBar, drawer/…
+  store/            Zustand store — state + send/streaming orchestration
   lib/
-    anthropic.ts    Messages API streaming client (tools, thinking, tool loop)
+    anthropic.ts    Messages API streaming client + the tool loop
     images.ts       OpenAI image generation (gpt-image-2)
+    prompt.ts       system-prompt composition
+    party/          party mode — types, prompts, turn-loop engine
+    tools/          client-side tools (image, memory, skills)
     blocks.ts       markdown-ish text -> paragraph/heading/list/code blocks
     highlight.tsx   regex-based code syntax highlighting
-    config.ts       models, themes, personas (static config)
-    color.ts        color helpers
-    theme.ts        accent-color hook
+    config.ts       models, themes
   types/            shared domain types
-  styles/           design tokens (colors/fonts) + global resets
+  styles/           design tokens + global resets
 ```
 
-## Notes / known limitations
+## Notes
 
-- **API keys are held client-side by design** — they live in this browser's
-  `localStorage` and are sent directly to `api.anthropic.com` and
-  `api.openai.com`. That is fine for local single-user use. For a shared or
-  production deployment, put the keys behind a backend proxy instead of
-  shipping them to the browser.
-- The **logo** in the rail is a simple mark — the original design session's
-  logo direction was never resolved (see the end of `chats/chat1.md`).
+- **API keys are client-side by design.** They're kept in this browser and sent
+  directly to `api.anthropic.com` and `api.openai.com`. Fine for local
+  single-user use; put them behind a backend proxy before deploying anywhere
+  shared.
+- Per-character sampling temperature does **not** exist in party mode — Opus 4.8
+  and Sonnet 5 reject `temperature` outright, so character voice comes from the
+  persona prompt alone.

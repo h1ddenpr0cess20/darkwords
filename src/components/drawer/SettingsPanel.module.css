@@ -236,6 +236,14 @@
   font-size: 12.5px;
 }
 
+/*
+ * Masks key characters on a plain text input. type="password" would trigger
+ * the browser's save-password popup, which autocomplete="off" can't suppress.
+ */
+.masked:not(:placeholder-shown) {
+  -webkit-text-security: disc;
+}
+
 .hint {
   font-size: 11.5px;
   color: var(--text-6);

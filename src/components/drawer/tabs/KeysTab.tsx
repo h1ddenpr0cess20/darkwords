@@ -12,8 +12,8 @@ export function KeysTab() {
     <div className={styles.section}>
       <div className={styles.sectionLabel}>ANTHROPIC API KEY</div>
       <input
-        type="password"
-        className={styles.apiInput}
+        type="text"
+        className={`${styles.apiInput} ${styles.masked}`}
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}
         placeholder="sk-ant-…"
@@ -26,8 +26,8 @@ export function KeysTab() {
         OPENAI API KEY
       </div>
       <input
-        type="password"
-        className={styles.apiInput}
+        type="text"
+        className={`${styles.apiInput} ${styles.masked}`}
         value={imageApiKey}
         onChange={(e) => setImageApiKey(e.target.value)}
         placeholder="sk-…"

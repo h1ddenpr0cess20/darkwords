@@ -65,7 +65,7 @@ export async function completeOnce(opts: {
  * itself never emits the tags, so passing all text through is harmless. A
  * possible partial tag at a delta boundary is held back until the next delta.
  */
-function makeThinkTagDemux(onText: (delta: string) => void, onThinking: (delta: string) => void) {
+export function makeThinkTagDemux(onText: (delta: string) => void, onThinking: (delta: string) => void) {
   let buffer = '';
   let inThink = false;
 

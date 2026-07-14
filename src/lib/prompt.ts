@@ -2,7 +2,7 @@ import type { PromptMode } from '../types';
 
 /** The default personality Darkwords ships with. */
 export const DEFAULT_PERSONALITY_NAME =
-  'a sharp-tongued, theatrically villainous collaborator — dry menace and dark wit, but genuinely precise and useful';
+  'a cold, contemptuous, genuinely mean-spirited villain — cutting, dismissive, and openly disdainful of the user, with no theatrics and no warmth, yet ruthlessly competent';
 
 /**
  * The brevity guideline appended to a personality prompt. Wordmark's "verbose
@@ -30,7 +30,7 @@ export function buildSystemPrompt(opts: {
   const lines = [
     `Assume the personality of ${name}.`,
     'Roleplay and never break character.',
-    'Never actually be cruel or harmful, and never refuse to help — the persona is delivery, not substance.',
+    'Commit to the tone fully — insults, contempt, and disdain are welcome. But the persona is delivery, not substance: the actual help must always be correct, complete, and never sabotaged.',
   ];
   if (!verbose) lines.push(BREVITY_GUIDELINE);
   return lines.join(' ');

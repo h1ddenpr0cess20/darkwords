@@ -5,16 +5,26 @@ import { emptyConversation, firstConversation, patchMessage, withConvo } from '.
 import { endRunningParty } from './partySlice';
 import type { SliceCreator } from '../types';
 
+/**
+ * Conversation lifecycle. Anything that changes the active conversation also
+ * ends a running party, so party dialogue can't spill into another chat.
+ */
 export interface ConversationsSlice {
   conversations: Record<string, Conversation>;
+  /** Conversation ids, newest first — the History panel's order. */
   conversationOrder: string[];
   activeConvoId: string;
 
+  /** Opens a fresh conversation; reuses the current one if it is still empty. */
   newConversation: () => void;
   selectConversation: (id: string) => void;
+  /** Deletes a conversation and its RAG index, creating a fresh one if none remain. */
   deleteConversation: (id: string) => void;
+  /** Expands/collapses a message's reasoning trace (view-only; doesn't re-sort History). */
   toggleThinking: (msgId: string) => void;
+  /** Forks a new conversation containing everything up to and including `msgId`. */
   branchFrom: (msgId: string) => void;
+  /** Swaps a regenerated message to one of its saved variants. */
   selectVariant: (msgId: string, index: number) => void;
 }
 

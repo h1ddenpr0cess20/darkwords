@@ -1,6 +1,11 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import type { Attachment } from '../../types';
 
+/**
+ * A conversation turn in the shape the app stores it — plain text plus raw
+ * attachments. Converted to API content blocks at request time by
+ * {@link toApiContent}.
+ */
 export interface ApiMessage {
   role: 'user' | 'assistant';
   text: string;
@@ -14,6 +19,7 @@ function dataUrlToBase64(dataUrl: string): string {
   return comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
 }
 
+/** Decodes base64 to text, returning null when the bytes look binary. */
 function base64ToText(base64: string): string | null {
   try {
     const bin = atob(base64);
@@ -24,6 +30,11 @@ function base64ToText(base64: string): string | null {
   }
 }
 
+/**
+ * Converts one attachment to a content block: images and PDFs become native
+ * blocks, anything that decodes as text is inlined into a labelled text block,
+ * and unreadable binaries degrade to a placeholder line.
+ */
 function attachmentToBlock(att: Attachment): ContentBlockParam {
   if (!att.dataUrl) {
     return { type: 'text', text: `[attached file: ${att.name} — content unavailable]` };
@@ -49,6 +60,11 @@ function attachmentToBlock(att: Attachment): ContentBlockParam {
     : { type: 'text', text: `[attached file: ${att.name} — binary format not supported]` };
 }
 
+/**
+ * Builds the API content blocks for a message. Attachments are dropped when
+ * the files tool is disabled, and the result is never empty — the API rejects
+ * messages without content.
+ */
 export function toApiContent(m: ApiMessage, includeAttachments: boolean): ContentBlockParam[] {
   const blocks: ContentBlockParam[] = [];
   if (includeAttachments) {

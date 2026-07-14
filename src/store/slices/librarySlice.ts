@@ -4,6 +4,11 @@ import { parseSkill } from '../../lib/tools/skills';
 import { resetMcpSession } from '../../lib/tools/mcpClient';
 import type { SliceCreator } from '../types';
 
+/**
+ * The user's persistent library: memories, skills, and MCP servers. Skills and
+ * MCP servers are keyed by name — importing or adding a duplicate replaces the
+ * existing entry.
+ */
 export interface LibrarySlice {
   memoryEnabled: boolean;
   memoryLimit: number;
@@ -13,6 +18,7 @@ export interface LibrarySlice {
   mcpServers: McpServer[];
 
   toggleMemory: () => void;
+  /** Sets the FIFO cap on stored memories, trimming the oldest to fit. */
   setMemoryLimit: (limit: number) => void;
   addMemory: (text: string) => void;
   removeMemory: (id: string) => void;

@@ -2,6 +2,11 @@ import type { CSSProperties } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import styles from './TopStrip.module.css';
 
+/**
+ * The conversation header: title, turn count, and the party cast chips. In
+ * ordinary chat a turn is one user→assistant exchange, so user messages are
+ * counted; in a party every spoken message is its own turn.
+ */
 export function TopStrip() {
   const conversation = useAppStore((s) => s.conversations[s.activeConvoId]);
   const party = useAppStore((s) => s.activeParty);

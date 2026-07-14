@@ -6,6 +6,11 @@ import { buildTools, buildToolInstructions, summarizeServerToolResult } from './
 
 export type { ApiMessage } from './content';
 
+/**
+ * Progress callbacks a streaming turn reports through. Deltas arrive as they
+ * stream; tool events fire once per call (onToolCall when the call is seen,
+ * onToolResult when it resolves). All callbacks are optional.
+ */
 export interface StreamCallbacks {
   onThinkingDelta?: (delta: string) => void;
   onTextDelta?: (delta: string) => void;
@@ -147,6 +152,17 @@ async function runClientTools(
   return results;
 }
 
+/**
+ * Streams one full assistant turn, driving the tool loop to completion: client
+ * tool calls are executed in the browser and their results sent back, up to
+ * {@link MAX_TOOL_ROUNDTRIPS} rounds; `pause_turn` stops are resumed
+ * automatically. API failures are reported through `callbacks.onError` rather
+ * than thrown, and an abort ends the turn silently.
+ *
+ * Anthropic gets adaptive thinking with an effort level; LM Studio's
+ * Anthropic-compat server only understands the classic enabled/budget shape,
+ * so the request is shaped per target.
+ */
 export async function streamAssistantTurn(opts: {
   apiKey: string;
   /** Point at an Anthropic-compatible server (LM Studio) instead of api.anthropic.com. */

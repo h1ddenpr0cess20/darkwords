@@ -3,9 +3,19 @@ import { partyEngine } from '../../lib/party/engine';
 import { emptyConversation } from '../helpers';
 import type { SliceCreator } from '../types';
 
+/** Backup and restore for the Data panel. */
 export interface DataSlice {
+  /**
+   * Serializes conversations, gallery, library, and settings to pretty JSON.
+   * API keys and MCP auth tokens are deliberately left out of the file.
+   */
   exportData: () => string;
+  /**
+   * Restores an export, replacing current data. Returns false (leaving state
+   * untouched) when the JSON is not a usable export.
+   */
   importData: (json: string) => boolean;
+  /** Wipes everything back to a fresh install, ending any running party. */
   clearAllData: () => void;
 }
 

@@ -1,6 +1,7 @@
 import type { Attachment, GalleryItem, PanelId, SettingsTab } from '../../types';
 import type { SliceCreator } from '../types';
 
+/** Drawer/panel state, the composer's draft input and uploads, and the gallery. */
 export interface UiSlice {
   activePanel: PanelId;
   panelTab: SettingsTab;

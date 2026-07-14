@@ -38,6 +38,8 @@ function BranchIcon() {
 /**
  * Per-message controls, revealed on hover. Regenerating keeps the previous
  * answer as a version you can page back to rather than destroying it.
+ * Regenerate and branch are hidden during a party — the engine owns its own
+ * turn loop, and rewriting a single turn under it would desync the transcript.
  */
 export function MessageActions({ message }: { message: ChatMessage }) {
   const regenerate = useAppStore((s) => s.regenerateMessage);

@@ -3,6 +3,10 @@ import { useAppStore } from '../store/useAppStore';
 import { Markdown } from './Markdown';
 import styles from './MarginAnnotations.module.css';
 
+/**
+ * The collapsible reasoning/tool-call trace rendered in a message's margin.
+ * Renders nothing when the message has neither thinking text nor tool calls.
+ */
 export function MarginAnnotations({ message }: { message: ChatMessage }) {
   const toggleThinking = useAppStore((s) => s.toggleThinking);
 

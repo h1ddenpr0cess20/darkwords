@@ -34,6 +34,12 @@ const host: PartyHost = {
     return id;
   },
 
+  /**
+   * Streams one character turn through the ordinary chat pipeline.
+   * `streamAssistantTurn` reports API failures via callback rather than
+   * throwing, so a turn that errored without producing text is re-thrown here —
+   * otherwise the party would loop silently against a dead backend.
+   */
   async streamTurn({ messageId, character, systemPrompt, prompt, signal }) {
     const s = useAppStore.getState();
     const cid = s.activeConvoId;

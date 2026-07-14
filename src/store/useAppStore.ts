@@ -15,6 +15,13 @@ import './partyHost';
 
 export type { AppState } from './types';
 
+/**
+ * The app store: all slices combined, persisted to IndexedDB. `partialize`
+ * keeps only durable state — transient flags (streaming, panels, party status)
+ * are rebuilt on load, and a party `promptMode` is normalized back to
+ * `personality` since parties don't survive a reload. `migrate` upgrades older
+ * persisted shapes; bump `version` when the persisted shape changes.
+ */
 export const useAppStore = create<AppState>()(
   persist(
     (...a) => ({

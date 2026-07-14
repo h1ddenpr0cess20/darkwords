@@ -28,6 +28,7 @@ interface Session {
   fetchedAt: number;
 }
 
+/** Live session + cached tool list per server id. */
 const sessions = new Map<string, Session>();
 
 let rpcId = 0;
@@ -56,6 +57,7 @@ async function parseRpcResponse(res: Response): Promise<Record<string, unknown> 
   }
 }
 
+/** One JSON-RPC exchange with a server, threading the MCP session id through. */
 async function rpc(
   server: McpServer,
   sessionId: string | null,
@@ -95,6 +97,7 @@ async function rpc(
   return { result: msg.result, sessionId: nextSession };
 }
 
+/** Runs the MCP handshake (initialize → initialized) and lists the server's tools. */
 async function connect(server: McpServer, signal?: AbortSignal): Promise<Session> {
   const init = await rpc(
     server,

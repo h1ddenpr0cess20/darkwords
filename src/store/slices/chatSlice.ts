@@ -24,14 +24,25 @@ function appendContextToHistory(history: ApiMessage[], context: string): void {
   if (lastUser) lastUser.text = `${lastUser.text}${context}`;
 }
 
+/** Sending and streaming: the send pipeline, regeneration, and the stop button. */
 export interface ChatSlice {
   isSending: boolean;
 
+  /**
+   * Sends the composed input (text + pending uploads) and streams the reply.
+   * In party mode the text is handed to the engine as an interjection instead.
+   */
   sendMessage: () => Promise<void>;
+  /**
+   * Re-runs an assistant reply against the history before it. The previous
+   * answer is kept as a variant the user can flip back to.
+   */
   regenerateMessage: (msgId: string) => Promise<void>;
+  /** Aborts the in-flight turn — or stops the party when one is active. */
   stopStreaming: () => void;
 }
 
+/** The one in-flight ordinary-chat request; party turns are aborted via the engine. */
 let activeController: AbortController | null = null;
 
 export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({

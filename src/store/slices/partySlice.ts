@@ -11,6 +11,11 @@ import {
 import { emptyConversation } from '../helpers';
 import type { AppState, SliceCreator } from '../types';
 
+/**
+ * Party-mode UI state and controls. `partyDraft` is the form being edited;
+ * `partyStatus`/`activeParty` mirror the engine, which pushes them into the
+ * store via its host.
+ */
 export interface PartySlice {
   partyDraft: PartyConfig;
   partyStatus: PartyStatus;
@@ -22,10 +27,17 @@ export interface PartySlice {
   updatePartyCharacter: (id: string, patch: Partial<PartyCharacter>) => void;
   removePartyCharacter: (id: string) => void;
   togglePartyCharacterTool: (id: string, tool: PartyToolKey) => void;
+  /**
+   * Starts the draft party in a fresh conversation titled after the topic or
+   * cast. Characters with neither a name nor a persona are dropped; at least
+   * two must remain.
+   */
   startParty: () => void;
   pauseParty: () => void;
+  /** Resumes a paused party, or restarts a stopped one with its previous config. */
   resumeParty: () => void;
   stopParty: () => void;
+  /** Exits party mode entirely, clearing the engine's config. */
   leaveParty: () => void;
 }
 

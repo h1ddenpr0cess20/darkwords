@@ -5,6 +5,7 @@ import { makeId } from '../lib/id';
 import { PartyBar } from './PartyBar';
 import styles from './InputBar.module.css';
 
+/** Reads a picked file into an Attachment, inlining its bytes as a data URL. */
 function readFileAsAttachment(file: File): Promise<{ id: string; name: string; mimeType: string; size: number; dataUrl: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

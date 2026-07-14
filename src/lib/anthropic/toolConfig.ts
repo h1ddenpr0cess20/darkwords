@@ -2,6 +2,13 @@ import type Anthropic from '@anthropic-ai/sdk';
 import type { McpServer, ModelDef, ToolsEnabled } from '../../types';
 import type { ClientTool } from '../tools/types';
 
+/**
+ * Assembles the request's tool list: Anthropic server tools (web search, code
+ * execution) gated by the model's capabilities, the client tools Darkwords
+ * runs itself, and an MCP toolset per enabled server. Models with programmatic
+ * tool calling get the newer web-search variant only when code execution is
+ * off — the two conflict when combined.
+ */
 export function buildTools(
   tools: ToolsEnabled,
   model: ModelDef,
@@ -63,6 +70,11 @@ export function buildToolInstructions(tools: Anthropic.Beta.BetaToolUnion[]): st
   return lines.length ? `\n\nTool use:\n${lines.map((l) => `- ${l}`).join('\n')}` : '';
 }
 
+/**
+ * One-line summary of a server-tool result block for the message margin —
+ * result counts for search, exit status for code execution — since the full
+ * payload is far too large to display.
+ */
 export function summarizeServerToolResult(block: Anthropic.Beta.BetaContentBlock): {
   output: string;
   isError: boolean;

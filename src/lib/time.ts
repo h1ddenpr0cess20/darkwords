@@ -1,3 +1,7 @@
+/**
+ * Human-friendly age of a timestamp for the History panel — relative wording
+ * for the recent past, then clock time, then dates.
+ */
 export function formatRelativeTime(ts: number): string {
   const diffMs = Date.now() - ts;
   const min = Math.floor(diffMs / 60000);

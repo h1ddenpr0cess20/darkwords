@@ -7,6 +7,7 @@ export function nowTime(): string {
   return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
+/** A message's text for API history — the raw stream, or rebuilt from parts. */
 export function messageText(m: ChatMessage): string {
   return m.rawText || partsToPlainText(m.parts);
 }
@@ -19,6 +20,11 @@ export function emptyConversation(): Conversation {
 /** The conversation every fresh install starts with; also the migration target. */
 export const firstConversation = emptyConversation();
 
+/**
+ * Immutably rewrites one conversation and returns the store patch for it.
+ * A no-op patch when the conversation no longer exists (e.g. deleted while a
+ * turn was streaming into it).
+ */
 export function withConvo(
   state: AppState,
   convoId: string,
@@ -33,6 +39,7 @@ export function appendMessage(c: Conversation, msg: ChatMessage): Conversation {
   return { ...c, messages: [...c.messages, msg], updatedAt: Date.now() };
 }
 
+/** Applies a partial update (or updater function) to one message by id. */
 export function patchMessage(
   c: Conversation,
   msgId: string,
@@ -60,6 +67,11 @@ export function upsertTool(m: ChatMessage, info: { id: string; name: string; inp
   return { tools: [...existing, info] };
 }
 
+/**
+ * Attaches a result to its tool call. Falls back to the latest unresolved call
+ * when no id matches — some server tool result blocks arrive without a usable
+ * `tool_use_id`.
+ */
 export function resolveTool(m: ChatMessage, info: { id: string; output: string; isError?: boolean }): Partial<ChatMessage> {
   const existing = m.tools ?? [];
   if (!existing.length) return {};

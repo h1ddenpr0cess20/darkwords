@@ -1,5 +1,9 @@
 import type { ContentPart } from '../types';
 
+/**
+ * Serializes parsed blocks back to plain text. Used to rebuild API history for
+ * messages that predate `rawText` or were composed directly as parts.
+ */
 export function partsToPlainText(parts: ContentPart[]): string {
   return parts
     .map((p) => {
@@ -12,6 +16,7 @@ export function partsToPlainText(parts: ContentPart[]): string {
     .join('\n\n');
 }
 
+/** Strips inline bold/italic/code markers — blocks render as plain text. */
 function cleanInline(text: string): string {
   return text
     .replace(/\*\*(.+?)\*\*/g, '$1')

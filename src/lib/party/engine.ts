@@ -286,7 +286,11 @@ class PartyEngine {
     return lines.slice(-HISTORY_BUFFER_LIMIT);
   }
 
-  /** Emits one character turn, streaming into its own bubble. */
+  /**
+   * Emits one character turn, streaming into its own bubble. A bubble that
+   * produced no text is discarded rather than left spinning; unexpected errors
+   * propagate to the run loop, which posts the error bubble.
+   */
   private async emitTurn(speaker: PartyCharacter, isFirst: boolean): Promise<void> {
     const host = this.host;
     if (!host) return;

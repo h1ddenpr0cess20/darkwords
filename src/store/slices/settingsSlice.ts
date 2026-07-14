@@ -8,6 +8,7 @@ import {
 } from '../../lib/models';
 import type { SliceCreator } from '../types';
 
+/** Provider, model, tools, prompt, and appearance settings. */
 export interface SettingsSlice {
   provider: Provider;
   selectedModelId: ModelId;
@@ -37,6 +38,11 @@ export interface SettingsSlice {
   setProvider: (provider: Provider) => void;
   setLmStudioUrl: (url: string) => void;
   setEmbeddingModelId: (id: string) => void;
+  /**
+   * Re-fetches LM Studio's model list (a no-op for Anthropic — its catalog is
+   * fixed), auto-selecting the first model when none is chosen or the previous
+   * choice disappeared.
+   */
   refreshModels: () => Promise<void>;
 
   selectModel: (id: ModelId) => void;

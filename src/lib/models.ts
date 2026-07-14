@@ -27,6 +27,7 @@ export function anthropicModelDef(id: string, displayName?: string): ModelDef {
   };
 }
 
+/** The fixed Anthropic catalog; only LM Studio's list is fetched from a server. */
 export const ANTHROPIC_MODELS: ModelDef[] = [
   {
     id: 'claude-fable-5',
@@ -114,6 +115,15 @@ interface LmStudioV1Model {
   };
 }
 
+/**
+ * Fetches the model catalog from an LM Studio server, trying its APIs from
+ * richest to plainest: `/api/v1/models` reports per-model capabilities
+ * (including reasoning), `/api/v0/models` labels each model llm/vlm/embeddings,
+ * and the OpenAI-compatible `/v1/models` (ids only) is the last resort — there
+ * embedding models are told apart by name.
+ *
+ * @throws When no endpoint is reachable or the server has no models loaded.
+ */
 export async function fetchLmStudioModels(baseUrl: string): Promise<ModelCatalog> {
   const base = baseUrl.replace(/\/+$/, '');
 

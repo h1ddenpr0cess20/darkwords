@@ -1,3 +1,4 @@
+/** Unique-enough id for client-side records: prefix + timestamp + random suffix. */
 export function makeId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }

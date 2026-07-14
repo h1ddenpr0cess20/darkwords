@@ -1,5 +1,6 @@
 import type { ThemeDef } from '../types';
 
+/** The accent themes offered in Settings → Theme. */
 export const THEMES: ThemeDef[] = [
   { id: 'ink', color: '#7EE787', label: 'Ink' },
   { id: 'ember', color: '#E8B54D', label: 'Ember' },

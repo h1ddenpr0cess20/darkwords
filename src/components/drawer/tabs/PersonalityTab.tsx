@@ -43,7 +43,19 @@ export function PersonalityTab() {
         <div className={styles.section}>
           <div className={styles.sectionLabel}>PERSONALITY</div>
 
-          <label className={styles.fieldLabel}>Quick pick</label>
+          <textarea
+            className={styles.textarea}
+            rows={3}
+            value={personalityName}
+            onChange={(e) => setPersonalityName(e.target.value)}
+            placeholder="e.g. a sarcastic pirate captain"
+          />
+          <p className={styles.info}>
+            Anything goes: a character, a description, an emoji, an abstract concept. The system prompt becomes
+            “Assume the personality of [this]. Roleplay and never break character.”
+          </p>
+
+          <label className={styles.fieldLabel}>Alternates</label>
           <select
             className={styles.select}
             value=""
@@ -59,20 +71,7 @@ export function PersonalityTab() {
             ))}
           </select>
 
-          <textarea
-            className={styles.textarea}
-            style={{ marginTop: 10 }}
-            rows={3}
-            value={personalityName}
-            onChange={(e) => setPersonalityName(e.target.value)}
-            placeholder="e.g. a sarcastic pirate captain"
-          />
-          <p className={styles.info}>
-            Anything goes: a character, a description, an emoji, an abstract concept. The system prompt becomes
-            “Assume the personality of [this]. Roleplay and never break character.”
-          </p>
-
-          <div className={styles.toolRow}>
+          <div className={styles.toolRow} style={{ marginTop: 14 }}>
             <span className={styles.toolText}>
               <span className={styles.toolLabel}>Verbose mode</span>
               <span className={styles.toolHint}>Drop the “keep responses short” guideline</span>

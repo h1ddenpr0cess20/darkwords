@@ -117,7 +117,7 @@ export function PartyForm() {
           </div>
           <textarea
             className={styles.characterPersona}
-            rows={2}
+            rows={4}
             value={c.persona}
             onChange={(e) => updatePartyCharacter(c.id, { persona: e.target.value })}
             placeholder="Persona — e.g. a cynical ex-detective who trusts no one"

@@ -377,6 +377,7 @@
   line-height: 1.5;
   padding: 7px 8px;
   resize: vertical;
+  min-height: 76px;
   font-family: inherit;
 }
 

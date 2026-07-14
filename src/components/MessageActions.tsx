@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ChatMessage } from '../types';
 import { useAppStore } from '../store/useAppStore';
+import { partyOwnsInput } from '../store/slices/partySlice';
 import styles from './MessageActions.module.css';
 
 function CopyIcon() {
@@ -38,15 +39,17 @@ function BranchIcon() {
 /**
  * Per-message controls, revealed on hover. Regenerating keeps the previous
  * answer as a version you can page back to rather than destroying it.
- * Regenerate and branch are hidden during a party — the engine owns its own
- * turn loop, and rewriting a single turn under it would desync the transcript.
+ * Regenerate and branch are hidden while the party owns the conversation —
+ * the engine drives its own turn loop, and rewriting a single turn under it
+ * would desync the transcript. They come back once the party is stopped and
+ * chatting solo, same as sending an ordinary message does.
  */
 export function MessageActions({ message }: { message: ChatMessage }) {
   const regenerate = useAppStore((s) => s.regenerateMessage);
   const branch = useAppStore((s) => s.branchFrom);
   const selectVariant = useAppStore((s) => s.selectVariant);
   const isSending = useAppStore((s) => s.isSending);
-  const inParty = useAppStore((s) => Boolean(s.activeParty));
+  const inParty = useAppStore(partyOwnsInput);
 
   const [copied, setCopied] = useState(false);
 

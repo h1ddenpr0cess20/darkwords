@@ -126,11 +126,14 @@ const host: PartyHost = {
    * stopped party be resumed after a reload. Leaving party mode passes
    * `config: null` and is handled separately, by `leaveParty`, so a mere
    * conversation switch (which also stops the loop) never erases it here.
+   * Solo mode always resets once the party leaves 'stopped' — it's a
+   * per-visit choice, moot once the loop is running again.
    */
   setStatus(status, config) {
     useAppStore.setState((s) => ({
       partyStatus: status,
       activeParty: config,
+      ...(status !== 'stopped' ? { partySoloMode: false } : {}),
       ...(config ? withConvo(s, s.activeConvoId, (c) => ({ ...c, partyConfig: config })) : {}),
     }));
   },

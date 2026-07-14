@@ -3,6 +3,7 @@ import { makeId } from '../../lib/id';
 import { parseBlocks } from '../../lib/blocks';
 import { streamAssistantTurn, type ApiMessage } from '../../lib/anthropic';
 import { partyEngine } from '../../lib/party/engine';
+import { partyOwnsInput } from './partySlice';
 import type { MessageVariant } from '../../types';
 import { appendMessage, messageText, nowTime, patchMessage, withConvo } from '../helpers';
 import {
@@ -49,7 +50,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
   isSending: false,
 
   stopStreaming: () => {
-    if (get().activeParty) {
+    if (partyOwnsInput(get())) {
       partyEngine.stop();
       return;
     }
@@ -59,7 +60,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
 
   regenerateMessage: async (msgId) => {
     const s = get();
-    if (s.isSending || s.activeParty) return;
+    if (s.isSending || partyOwnsInput(s)) return;
 
     const cid = s.activeConvoId;
     const convo = s.conversations[cid];
@@ -156,7 +157,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
     const text = state.input.trim();
     if ((!text && state.pendingUploads.length === 0) || state.isSending) return;
 
-    if (state.activeParty) {
+    if (partyOwnsInput(state)) {
       set({ input: '' });
       partyEngine.queueInterjection(text);
       return;

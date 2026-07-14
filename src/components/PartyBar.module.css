@@ -73,3 +73,8 @@
   border-color: var(--accent);
   color: var(--accent);
 }
+
+.btnActive {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--accent);
+}

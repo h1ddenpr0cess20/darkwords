@@ -15,12 +15,21 @@ import type { AppState, SliceCreator } from '../types';
 /**
  * Party-mode UI state and controls. `partyDraft` is the form being edited;
  * `partyStatus`/`activeParty` mirror the engine, which pushes them into the
- * store via its host.
+ * store via its host. `partySoloMode` only matters while stopped — see
+ * {@link partyOwnsInput}.
  */
 export interface PartySlice {
   partyDraft: PartyConfig;
   partyStatus: PartyStatus;
   activeParty: PartyConfig | null;
+  /**
+   * While a party is stopped, lets the user carry the conversation on as an
+   * ordinary one-on-one chat instead of every message resuming the party.
+   * Reset to `false` whenever the party leaves the stopped state (see
+   * `setStatus` in partyHost.ts) — solo chatting is a per-visit choice, not a
+   * durable setting.
+   */
+  partySoloMode: boolean;
 
   setPartyUserName: (name: string) => void;
   setPartyScenario: (patch: Partial<PartyScenario>) => void;
@@ -40,6 +49,8 @@ export interface PartySlice {
   stopParty: () => void;
   /** Exits party mode entirely, clearing the engine's config and its saved conversation. */
   leaveParty: () => void;
+  /** Flips solo mode; only takes effect while the party is stopped (see {@link partyOwnsInput}). */
+  togglePartySoloMode: () => void;
 }
 
 /** Label colours handed out to new party characters, in order. */
@@ -72,10 +83,24 @@ export function loadPartyForConversation(convo: Conversation | undefined): Parti
   return { promptMode: 'party' };
 }
 
+/**
+ * Whether a message typed right now should be handed to the party engine as
+ * an interjection (true) or sent as an ordinary solo turn (false). A live
+ * party — running or paused — always owns the input, since its loop is
+ * already driving the conversation. A stopped one only owns it while solo
+ * mode is off; flipping that on lets the user carry the same conversation on
+ * normally; the transcript is shared either way, so if the party resumes
+ * later it picks up whatever was said in between as part of its own history.
+ */
+export function partyOwnsInput(s: Pick<AppState, 'activeParty' | 'partyStatus' | 'partySoloMode'>): boolean {
+  return Boolean(s.activeParty) && !(s.partyStatus === 'stopped' && s.partySoloMode);
+}
+
 export const createPartySlice: SliceCreator<PartySlice> = (set, get) => ({
   partyDraft: defaultPartyConfig(),
   partyStatus: 'off',
   activeParty: null,
+  partySoloMode: false,
 
   setPartyUserName: (name) => set((s) => ({ partyDraft: { ...s.partyDraft, userName: name } })),
   setPartyScenario: (patch) =>
@@ -169,4 +194,5 @@ export const createPartySlice: SliceCreator<PartySlice> = (set, get) => ({
     partyEngine.reset();
     set((s) => ({ promptMode: 'personality', ...withConvo(s, cid, (c) => ({ ...c, partyConfig: undefined })) }));
   },
+  togglePartySoloMode: () => set((s) => ({ partySoloMode: !s.partySoloMode })),
 });

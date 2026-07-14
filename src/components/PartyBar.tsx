@@ -10,21 +10,26 @@ import styles from './PartyBar.module.css';
 export function PartyBar() {
   const status = useAppStore((s) => s.partyStatus);
   const party = useAppStore((s) => s.activeParty);
+  const soloMode = useAppStore((s) => s.partySoloMode);
   const pauseParty = useAppStore((s) => s.pauseParty);
   const resumeParty = useAppStore((s) => s.resumeParty);
   const stopParty = useAppStore((s) => s.stopParty);
   const leaveParty = useAppStore((s) => s.leaveParty);
+  const togglePartySoloMode = useAppStore((s) => s.togglePartySoloMode);
 
   if (!party || status === 'off') return null;
 
   const cast = party.characters.map((c) => c.name).join(', ');
+  const stoppedSolo = status === 'stopped' && soloMode;
 
   const label =
     status === 'running'
       ? 'Party in progress — type any time to join in'
       : status === 'paused'
         ? 'Party paused'
-        : 'Party stopped — resume to continue';
+        : stoppedSolo
+          ? 'Chatting solo — resume to bring the party back'
+          : 'Party stopped — resume to continue, or chat solo';
 
   return (
     <div className={styles.bar}>
@@ -36,6 +41,19 @@ export function PartyBar() {
         {status === 'running' && (
           <button className={styles.btn} onClick={pauseParty}>
             Pause
+          </button>
+        )}
+        {status === 'stopped' && (
+          <button
+            className={`${styles.btn} ${stoppedSolo ? styles.btnActive : ''}`}
+            onClick={togglePartySoloMode}
+            title={
+              stoppedSolo
+                ? 'Typing sends a normal reply. Click to have your next message resume the party instead.'
+                : 'Typing resumes the party. Click to chat normally instead — the party can still catch up on it later.'
+            }
+          >
+            {stoppedSolo ? 'Solo' : 'Chat solo'}
           </button>
         )}
         {(status === 'paused' || status === 'stopped') && (

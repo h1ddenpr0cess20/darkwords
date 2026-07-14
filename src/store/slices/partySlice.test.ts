@@ -3,7 +3,7 @@ import type { Conversation } from '../../types';
 import type { PartyConfig } from '../../lib/party/types';
 import type { AppState } from '../types';
 import { partyEngine } from '../../lib/party/engine';
-import { endRunningParty, loadPartyForConversation } from './partySlice';
+import { endRunningParty, loadPartyForConversation, partyOwnsInput } from './partySlice';
 
 function convo(over: Partial<Conversation> = {}): Conversation {
   return { id: 'c1', title: 't', messages: [], createdAt: 1, updatedAt: 1, ...over };
@@ -36,6 +36,22 @@ describe('loadPartyForConversation', () => {
     expect(patch).toEqual({ promptMode: 'party' });
     expect(partyEngine.activeConfig()?.characters.map((c) => c.name)).toEqual(['Alice', 'Bob']);
     expect(partyEngine.isRunning()).toBe(false);
+  });
+});
+
+describe('partyOwnsInput', () => {
+  it('is false with no party loaded', () => {
+    expect(partyOwnsInput({ activeParty: null, partyStatus: 'off', partySoloMode: false })).toBe(false);
+  });
+
+  it('is true while running or paused, regardless of solo mode', () => {
+    expect(partyOwnsInput({ activeParty: config(), partyStatus: 'running', partySoloMode: true })).toBe(true);
+    expect(partyOwnsInput({ activeParty: config(), partyStatus: 'paused', partySoloMode: true })).toBe(true);
+  });
+
+  it('is true while stopped unless solo mode is on', () => {
+    expect(partyOwnsInput({ activeParty: config(), partyStatus: 'stopped', partySoloMode: false })).toBe(true);
+    expect(partyOwnsInput({ activeParty: config(), partyStatus: 'stopped', partySoloMode: true })).toBe(false);
   });
 });
 

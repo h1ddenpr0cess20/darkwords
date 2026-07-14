@@ -13,6 +13,15 @@
   .app {
     flex-direction: column-reverse;
   }
+
+  /*
+   * height: 100% would size .main to the full 100dvh container even though the
+   * rail occupies 58px, and column-reverse clips that overflow at the top.
+   */
+  .main {
+    height: auto;
+    min-height: 0;
+  }
 }
 
 .main {

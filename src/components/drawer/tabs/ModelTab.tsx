@@ -94,12 +94,14 @@ export function ModelTab() {
         {!models.length && !modelsLoading && !modelsError && (
           <p className={styles.info}>No models loaded yet.</p>
         )}
-        {modelsError && <span className={styles.warn}>{modelsError}</span>}
-        <div className={styles.partyActions}>
-          <button className={styles.secondaryBtn} onClick={() => void refreshModels()} disabled={modelsLoading}>
-            {modelsLoading ? 'Loading…' : 'Refresh models'}
-          </button>
-        </div>
+        {provider === 'lmstudio' && modelsError && <span className={styles.warn}>{modelsError}</span>}
+        {provider === 'lmstudio' && (
+          <div className={styles.partyActions}>
+            <button className={styles.secondaryBtn} onClick={() => void refreshModels()} disabled={modelsLoading}>
+              {modelsLoading ? 'Loading…' : 'Refresh models'}
+            </button>
+          </div>
+        )}
       </div>
 
       {provider === 'lmstudio' && (

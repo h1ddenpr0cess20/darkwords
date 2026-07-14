@@ -1,9 +1,9 @@
 import type { Effort, ModelDef, ModelId, PromptMode, Provider, ThemeId, ToolsEnabled } from '../../types';
 import { DEFAULT_PERSONALITY_NAME } from '../../lib/prompt';
 import {
+  ANTHROPIC_MODELS,
   DEFAULT_ANTHROPIC_MODEL,
   DEFAULT_LM_STUDIO_URL,
-  fetchAnthropicModels,
   fetchLmStudioModels,
 } from '../../lib/models';
 import type { SliceCreator } from '../types';
@@ -22,7 +22,7 @@ export interface SettingsSlice {
   /** User-set embedding model for local RAG; blank = auto-detect. */
   embeddingModelId: string;
 
-  /** Fetched model catalogs — not persisted; refreshed from the endpoints. */
+  /** Anthropic's catalog is hardcoded; LM Studio's is fetched from the server. */
   anthropicModels: ModelDef[];
   lmStudioModels: ModelDef[];
   embeddingModels: string[];
@@ -66,7 +66,7 @@ export const createSettingsSlice: SliceCreator<SettingsSlice> = (set, get) => ({
   lmStudioModelId: '',
   embeddingModelId: '',
 
-  anthropicModels: [],
+  anthropicModels: ANTHROPIC_MODELS,
   lmStudioModels: [],
   embeddingModels: [],
   modelsError: null,
@@ -84,29 +84,22 @@ export const createSettingsSlice: SliceCreator<SettingsSlice> = (set, get) => ({
   setLmStudioUrl: (url) => set({ lmStudioUrl: url.trim().replace(/\/+$/, '') }),
   setEmbeddingModelId: (id) => set({ embeddingModelId: id }),
 
+  // Only LM Studio has anything to fetch — the Anthropic catalog is fixed.
   refreshModels: async () => {
     const s = get();
+    if (s.provider !== 'lmstudio') return;
     set({ modelsLoading: true, modelsError: null });
     try {
-      if (s.provider === 'lmstudio') {
-        const catalog = await fetchLmStudioModels(s.lmStudioUrl);
-        set((st) => ({
-          lmStudioModels: catalog.chat,
-          embeddingModels: catalog.embeddings,
-          // Auto-select the first model when none is chosen or the choice vanished.
-          lmStudioModelId:
-            st.lmStudioModelId && catalog.chat.some((m) => m.id === st.lmStudioModelId)
-              ? st.lmStudioModelId
-              : (catalog.chat[0]?.id ?? ''),
-        }));
-      } else {
-        if (!s.apiKey) {
-          set({ modelsError: 'Set an Anthropic API key to load the model list.' });
-          return;
-        }
-        const catalog = await fetchAnthropicModels(s.apiKey);
-        set({ anthropicModels: catalog.chat });
-      }
+      const catalog = await fetchLmStudioModels(s.lmStudioUrl);
+      set((st) => ({
+        lmStudioModels: catalog.chat,
+        embeddingModels: catalog.embeddings,
+        // Auto-select the first model when none is chosen or the choice vanished.
+        lmStudioModelId:
+          st.lmStudioModelId && catalog.chat.some((m) => m.id === st.lmStudioModelId)
+            ? st.lmStudioModelId
+            : (catalog.chat[0]?.id ?? ''),
+      }));
     } catch (err) {
       set({ modelsError: err instanceof Error ? err.message : String(err) });
     } finally {

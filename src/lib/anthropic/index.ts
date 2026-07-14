@@ -222,11 +222,16 @@ export async function streamAssistantTurn(opts: {
             })),
           }
         : {}),
+      // Anthropic gets adaptive thinking with an effort level; LM Studio's
+      // Anthropic-compat server only understands the classic enabled/budget
+      // shape, and without a thinking param reasoning models don't reason.
       ...(useThinking
-        ? {
-            thinking: { type: 'adaptive' as const, display: 'summarized' as const },
-            output_config: { effort },
-          }
+        ? baseURL
+          ? { thinking: { type: 'enabled' as const, budget_tokens: Math.floor(model.maxTokens / 2) } }
+          : {
+              thinking: { type: 'adaptive' as const, display: 'summarized' as const },
+              output_config: { effort },
+            }
         : {}),
     };
 

@@ -1,9 +1,8 @@
 import type { ModelDef, Provider } from '../types';
 import { EMBEDDING_NAME_RE } from './rag/embeddings';
 
-export const ANTHROPIC_VERSION = '2023-06-01';
 export const DEFAULT_LM_STUDIO_URL = 'http://localhost:1234';
-export const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-8';
+export const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-5';
 
 function shortLabel(name: string): string {
   const family = name.match(/opus|sonnet|haiku|fable|mythos/i)?.[0];
@@ -11,8 +10,7 @@ function shortLabel(name: string): string {
 }
 
 /**
- * Capability heuristics from the model id — the models endpoint reports
- * nothing beyond id and display name. Haiku and Claude 3.x lack adaptive
+ * Capability heuristics from the model id. Haiku and Claude 3.x lack adaptive
  * thinking and programmatic tool calling.
  */
 export function anthropicModelDef(id: string, displayName?: string): ModelDef {
@@ -29,19 +27,64 @@ export function anthropicModelDef(id: string, displayName?: string): ModelDef {
   };
 }
 
+/** The Anthropic catalog is fixed; only LM Studio's is fetched from a server. */
+export const ANTHROPIC_MODELS: ModelDef[] = [
+  {
+    id: 'claude-fable-5',
+    apiModel: 'claude-fable-5',
+    name: 'Claude Fable 5',
+    short: 'F',
+    blurb: 'Most intelligent, Mythos-class',
+    supportsThinking: true,
+    supportsProgrammaticTools: true,
+    maxTokens: 16000,
+  },
+  {
+    id: 'claude-opus-4-8',
+    apiModel: 'claude-opus-4-8',
+    name: 'Claude Opus 4.8',
+    short: 'O',
+    blurb: 'Most capable Opus, slower',
+    supportsThinking: true,
+    supportsProgrammaticTools: true,
+    maxTokens: 16000,
+  },
+  {
+    id: 'claude-sonnet-5',
+    apiModel: 'claude-sonnet-5',
+    name: 'Claude Sonnet 5',
+    short: 'S',
+    blurb: 'Balanced default',
+    supportsThinking: true,
+    supportsProgrammaticTools: true,
+    maxTokens: 16000,
+  },
+  {
+    id: 'claude-haiku-4-5',
+    apiModel: 'claude-haiku-4-5',
+    name: 'Claude Haiku 4.5',
+    short: 'H',
+    blurb: 'Fastest, lightweight',
+    supportsThinking: false,
+    supportsProgrammaticTools: false,
+    maxTokens: 8192,
+  },
+];
+
 /**
- * Local models get no Anthropic server tools and no thinking request params —
- * reasoning models emit `<think>` spans inline, which the stream demuxes into
- * the thinking callback instead.
+ * Local models get no Anthropic server tools. Reasoning support comes from
+ * LM Studio's model catalog (`capabilities.reasoning`); when unknown we assume
+ * false, but the `<think>`-tag demux still catches models that emit reasoning
+ * inline in the text.
  */
-export function lmStudioModelDef(id: string, blurb = 'local model'): ModelDef {
+export function lmStudioModelDef(id: string, blurb = 'local model', supportsThinking = false): ModelDef {
   return {
     id,
     apiModel: id,
     name: id,
     short: (id.replace(/^[^a-z0-9]*/i, '')[0] || 'L').toUpperCase(),
     blurb,
-    supportsThinking: false,
+    supportsThinking,
     supportsProgrammaticTools: false,
     maxTokens: 4096,
   };
@@ -53,21 +96,6 @@ export interface ModelCatalog {
   embeddings: string[];
 }
 
-export async function fetchAnthropicModels(apiKey: string): Promise<ModelCatalog> {
-  const res = await fetch('https://api.anthropic.com/v1/models?limit=100', {
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': ANTHROPIC_VERSION,
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-  });
-  if (!res.ok) throw new Error(`Model list failed: HTTP ${res.status}`);
-  const data = (await res.json()) as { data?: { id: string; display_name?: string }[] };
-  const chat = (data.data ?? []).map((m) => anthropicModelDef(m.id, m.display_name));
-  if (!chat.length) throw new Error('Model list came back empty');
-  return { chat, embeddings: [] };
-}
-
 interface LmStudioV0Model {
   id: string;
   type?: string;
@@ -76,11 +104,50 @@ interface LmStudioV0Model {
   publisher?: string;
 }
 
+interface LmStudioV1Model {
+  key: string;
+  type?: string;
+  architecture?: string;
+  params_string?: string;
+  loaded_instances?: unknown[];
+  capabilities?: {
+    reasoning?: { allowed_options?: string[]; default?: string };
+  };
+}
+
 export async function fetchLmStudioModels(baseUrl: string): Promise<ModelCatalog> {
   const base = baseUrl.replace(/\/+$/, '');
 
-  // /api/v0/models labels each model llm/vlm/embeddings; fall back to the
-  // OpenAI-compatible /v1/models (ids only) on older versions.
+  // /api/v1/models reports per-model capabilities, including whether the model
+  // can reason; /api/v0/models labels each model llm/vlm/embeddings; the
+  // OpenAI-compatible /v1/models (ids only) is the last resort.
+  try {
+    const res = await fetch(`${base}/api/v1/models`);
+    if (res.ok) {
+      const data = (await res.json()) as { models?: LmStudioV1Model[] };
+      const models = data.models ?? [];
+      if (models.length) {
+        const isEmbedding = (m: LmStudioV1Model) =>
+          m.type === 'embedding' || m.type === 'embeddings' || EMBEDDING_NAME_RE.test(m.key);
+        const chat = models
+          .filter((m) => !isEmbedding(m))
+          .map((m) =>
+            lmStudioModelDef(
+              m.key,
+              [m.architecture, m.params_string, m.loaded_instances?.length ? 'loaded' : null]
+                .filter(Boolean)
+                .join(' — ') || 'local model',
+              m.capabilities?.reasoning?.allowed_options?.includes('on') ?? false,
+            ),
+          );
+        const embeddings = models.filter(isEmbedding).map((m) => m.key);
+        return { chat, embeddings };
+      }
+    }
+  } catch {
+    // fall through to /api/v0/models
+  }
+
   try {
     const res = await fetch(`${base}/api/v0/models`);
     if (res.ok) {

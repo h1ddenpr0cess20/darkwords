@@ -488,3 +488,12 @@
 .dangerBtn:hover {
   background: #e8848418;
 }
+
+.link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}

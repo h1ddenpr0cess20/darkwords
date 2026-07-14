@@ -90,7 +90,11 @@
   font-size: 14px;
   line-height: 1.5;
   padding: 6px 0;
-  max-height: 140px;
+  /* Keep in sync with TEXTAREA_MAX_HEIGHT in InputBar.tsx — sized to fit
+     within the feed's reserved bottom padding on both breakpoints, so a
+     long message scrolls inside the box instead of growing over the feed. */
+  max-height: 88px;
+  overflow-y: auto;
 }
 
 .sendBtn {

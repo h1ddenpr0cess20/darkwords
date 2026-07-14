@@ -5,6 +5,15 @@ import { makeId } from '../lib/id';
 import { PartyBar } from './PartyBar';
 import styles from './InputBar.module.css';
 
+/**
+ * Caps how tall the textarea grows before it scrolls internally instead —
+ * must stay in sync with `.textarea`'s max-height in InputBar.module.css.
+ * The floating input bar overlaps the feed above a certain height (the feed
+ * only reserves so much bottom padding for it), so this has to leave room
+ * for the bar's own padding/border and the wrap's bottom padding on top.
+ */
+const TEXTAREA_MAX_HEIGHT = 88;
+
 /** Reads a picked file into an Attachment, inlining its bytes as a data URL. */
 function readFileAsAttachment(file: File): Promise<{ id: string; name: string; mimeType: string; size: number; dataUrl: string }> {
   return new Promise((resolve, reject) => {
@@ -33,7 +42,7 @@ export function InputBar() {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT)}px`;
   };
 
   const onChange = (e: ChangeEvent<HTMLTextAreaElement>) => {

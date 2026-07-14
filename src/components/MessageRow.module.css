@@ -158,6 +158,20 @@
   line-height: 1.45;
 }
 
+.imagePlaceholder {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 420px;
+  margin: 4px 0 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--field-border);
+  background: var(--row-bg);
+  color: var(--text-5);
+  font-size: 12.5px;
+}
+
 @media (max-width: 720px) {
   .row {
     grid-template-columns: 1fr;

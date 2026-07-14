@@ -31,6 +31,14 @@ export function MessageRow({ message }: { message: ChatMessage }) {
   const { accent, accentBg } = useAccent();
   const openLightbox = useAppStore((s) => s.openLightbox);
   const isUser = message.role === 'user';
+  /**
+   * A generate_image call recorded but not yet resolved. Gated on `streaming`
+   * too — a call aborted before it ever ran (Stop hit right as it started)
+   * never gets an `onToolResult`, so without this the spinner would be stuck
+   * forever; `streaming` always goes false when the turn ends regardless.
+   */
+  const generatingImage =
+    message.streaming && (message.tools ?? []).some((t) => t.name === 'generate_image' && t.output === undefined);
   const nameColor = message.nameColor ?? (isUser ? 'var(--text-0)' : accent);
   const avatarBg = isUser ? 'var(--row-bg-alt)' : accentBg;
   const avatarColor = isUser ? 'var(--text-2)' : accent;
@@ -109,6 +117,17 @@ export function MessageRow({ message }: { message: ChatMessage }) {
               <figcaption className={styles.caption}>{img.label}</figcaption>
             </figure>
           ))}
+
+          {generatingImage && (
+            <div className={styles.imagePlaceholder}>
+              <span className={styles.streamDots}>
+                <span className={styles.dot} style={{ animationDelay: '0s' }} />
+                <span className={styles.dot} style={{ animationDelay: '.15s' }} />
+                <span className={styles.dot} style={{ animationDelay: '.3s' }} />
+              </span>
+              <span>Generating image…</span>
+            </div>
+          )}
 
           {(message.generatedFiles ?? []).length > 0 && (
             <div className={styles.attachments}>

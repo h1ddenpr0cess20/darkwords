@@ -132,9 +132,39 @@ async function fetchGeneratedFile(client: Anthropic, fileId: string): Promise<At
     ]);
     const dataUrl = await blobToDataUrl(await response.blob());
     return { id: fileId, name: metadata.filename, mimeType: metadata.mime_type, size: metadata.size_bytes, dataUrl };
-  } catch {
+  } catch (err) {
+    console.warn(`Downloading generated file ${fileId} failed`, err);
     return null;
   }
+}
+
+/**
+ * File ids for everything the code interpreter wrote out in one assistant
+ * message. The current tool revision (code_execution_20260521) reports files
+ * as `*_code_execution_output` blocks nested inside its tool-result blocks;
+ * the original 2025-05-22 revision surfaced them as top-level
+ * `container_upload` blocks instead. Both shapes are scanned, deduplicated.
+ */
+function collectGeneratedFileIds(content: Anthropic.Beta.BetaContentBlock[]): string[] {
+  const ids = new Set<string>();
+  for (const block of content) {
+    if (block.type === 'container_upload') {
+      ids.add(block.file_id);
+    } else if (
+      block.type === 'code_execution_tool_result' ||
+      block.type === 'bash_code_execution_tool_result'
+    ) {
+      // `content` is either an error block or a result block whose own
+      // `content` lists the files the execution created.
+      const result = block.content;
+      if (result && 'content' in result && Array.isArray(result.content)) {
+        for (const output of result.content) {
+          if (output.file_id) ids.add(output.file_id);
+        }
+      }
+    }
+  }
+  return [...ids];
 }
 
 /**
@@ -325,9 +355,7 @@ export async function streamAssistantTurn(opts: {
       return;
     }
 
-    const fileIds = finalMessage.content
-      .filter((b): b is Anthropic.Beta.BetaContainerUploadBlock => b.type === 'container_upload')
-      .map((b) => b.file_id);
+    const fileIds = collectGeneratedFileIds(finalMessage.content);
     if (fileIds.length) {
       const files = await Promise.all(fileIds.map((id) => fetchGeneratedFile(client, id)));
       for (const file of files) if (file) callbacks.onFileOutput?.(file);

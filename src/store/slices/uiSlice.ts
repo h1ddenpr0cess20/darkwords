@@ -30,7 +30,7 @@ export interface UiSlice {
 
 export const createUiSlice: SliceCreator<UiSlice> = (set) => ({
   activePanel: null,
-  panelTab: 'model',
+  panelTab: 'personality',
   modelPickerOpen: false,
 
   input: '',
@@ -42,7 +42,7 @@ export const createUiSlice: SliceCreator<UiSlice> = (set) => ({
   addUpload: (att) => set((s) => ({ pendingUploads: [...s.pendingUploads, att] })),
   removeUpload: (id) => set((s) => ({ pendingUploads: s.pendingUploads.filter((u) => u.id !== id) })),
 
-  openSettings: () => set({ activePanel: 'settings', panelTab: 'model', modelPickerOpen: false }),
+  openSettings: () => set({ activePanel: 'settings', panelTab: 'personality', modelPickerOpen: false }),
   openHistory: () => set({ activePanel: 'history', modelPickerOpen: false }),
   openGallery: () => set({ activePanel: 'gallery', modelPickerOpen: false }),
   openLightbox: (image) => set({ lightbox: image }),

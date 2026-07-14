@@ -13,9 +13,9 @@ import type { SettingsTab } from '../../types';
 import styles from './SettingsPanel.module.css';
 
 const TABS: { key: SettingsTab; label: string }[] = [
+  { key: 'personality', label: 'Personality' },
   { key: 'model', label: 'Model' },
   { key: 'tools', label: 'Tools' },
-  { key: 'personality', label: 'Personality' },
   { key: 'memory', label: 'Memory' },
   { key: 'skills', label: 'Skills' },
   { key: 'theme', label: 'Theme' },

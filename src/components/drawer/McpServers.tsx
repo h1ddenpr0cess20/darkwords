@@ -3,12 +3,14 @@ import { useAppStore } from '../../store/useAppStore';
 import styles from './SettingsPanel.module.css';
 
 /**
- * Remote MCP servers, connected through Anthropic's MCP connector. Anthropic
- * makes the connection server-side, so the browser never talks to the MCP server
- * directly and there is no CORS problem.
+ * Remote MCP servers. On Anthropic they go through the server-side MCP
+ * connector (no CORS involved); on LM Studio the browser talks to the MCP
+ * server directly and exposes its tools as function tools, so the server must
+ * allow CORS from this origin.
  */
 export function McpServers() {
   const servers = useAppStore((s) => s.mcpServers);
+  const provider = useAppStore((s) => s.provider);
   const addMcpServer = useAppStore((s) => s.addMcpServer);
   const toggleMcpServer = useAppStore((s) => s.toggleMcpServer);
   const removeMcpServer = useAppStore((s) => s.removeMcpServer);
@@ -29,7 +31,9 @@ export function McpServers() {
     <div className={styles.section}>
       <div className={styles.sectionLabel}>MCP SERVERS</div>
       <p className={styles.info}>
-        Connect a remote MCP server to give Claude its tools. Anthropic connects to it server-side.
+        {provider === 'lmstudio'
+          ? 'Connect an MCP server to give the model its tools. The browser calls it directly, so the server must allow CORS.'
+          : 'Connect a remote MCP server to give Claude its tools. Anthropic connects to it server-side.'}
       </p>
 
       {servers.map((m) => (

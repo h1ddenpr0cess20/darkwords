@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useAppStore } from '../store/useAppStore';
-import { MODELS } from '../lib/config';
+import { resolveModel } from '../lib/models';
 import { useAccent } from '../lib/theme';
 import styles from './Rail.module.css';
 
@@ -46,10 +46,16 @@ export function Rail() {
   const openSettings = useAppStore((s) => s.openSettings);
   const modelPickerOpen = useAppStore((s) => s.modelPickerOpen);
   const toggleModelPicker = useAppStore((s) => s.toggleModelPicker);
-  const selectedModelId = useAppStore((s) => s.selectedModelId);
   const selectModel = useAppStore((s) => s.selectModel);
+  const provider = useAppStore((s) => s.provider);
+  const anthropicModels = useAppStore((s) => s.anthropicModels);
+  const lmStudioModels = useAppStore((s) => s.lmStudioModels);
+  const selectedModelId = useAppStore((s) =>
+    s.provider === 'lmstudio' ? s.lmStudioModelId : s.selectedModelId,
+  );
 
-  const selectedModel = MODELS.find((m) => m.id === selectedModelId) ?? MODELS[0];
+  const models = provider === 'lmstudio' ? lmStudioModels : anthropicModels;
+  const selectedModel = resolveModel(provider, selectedModelId, models);
   const cssVars = { '--accent': accent, '--accent-bg': accentBg } as CSSProperties;
 
   return (
@@ -87,7 +93,12 @@ export function Rail() {
         {modelPickerOpen && (
           <div className={styles.modelDropdown}>
             <div className={styles.modelDropdownLabel}>MODEL</div>
-            {MODELS.map((mo) => (
+            {models.length === 0 && (
+              <div className={styles.modelDropdownLabel} style={{ padding: '6px 10px' }}>
+                No models loaded — open Settings → Model
+              </div>
+            )}
+            {models.map((mo) => (
               <button
                 key={mo.id}
                 onClick={() => selectModel(mo.id)}

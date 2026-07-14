@@ -95,7 +95,11 @@ export interface ThemeDef {
   label: string;
 }
 
-export type ModelId = 'opus' | 'sonnet' | 'haiku';
+/** Which chat backend requests go to. */
+export type Provider = 'anthropic' | 'lmstudio';
+
+/** The API model id — model lists are fetched from the provider's endpoint. */
+export type ModelId = string;
 
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 

@@ -1,0 +1,161 @@
+/**
+ * Local embedding utilities for client-side document retrieval, ported from
+ * Wordmark. Text chunking, cosine similarity, and calls to LM Studio's
+ * OpenAI-compatible `/v1/embeddings` endpoint. Used to build an in-browser
+ * vector index over attached documents so local models retrieve only the
+ * relevant passages per turn instead of receiving every file's full text.
+ */
+
+/** Maximum inputs per `/embeddings` request. */
+export const EMBEDDING_BATCH_SIZE = 64;
+
+/**
+ * Splits text into chunks of about `size` characters, preferring paragraph,
+ * then line, sentence, and word boundaries so chunks stay coherent.
+ */
+export function chunkText(t: string, size = 2000, overlap = 200): string[] {
+  const chunks: string[] = [];
+  let start = 0;
+  const safeSize = Math.max(100, size);
+  const safeOverlap = Math.max(0, Math.min(overlap, Math.floor(safeSize / 3)));
+
+  while (start < t.length) {
+    if (start + safeSize >= t.length) {
+      const tail = t.slice(start).trim();
+      if (tail) chunks.push(tail);
+      break;
+    }
+
+    const window = t.slice(start, start + safeSize);
+    let breakAt = -1;
+
+    const paraIdx = window.lastIndexOf('\n\n');
+    if (paraIdx >= safeSize * 0.4) breakAt = paraIdx + 2;
+
+    if (breakAt < 0) {
+      const nlIdx = window.lastIndexOf('\n');
+      if (nlIdx >= safeSize * 0.4) breakAt = nlIdx + 1;
+    }
+
+    if (breakAt < 0) {
+      const sentMatches = [...window.matchAll(/[.!?]\s+/g)];
+      if (sentMatches.length) {
+        const last = sentMatches[sentMatches.length - 1];
+        if ((last.index ?? -1) >= safeSize * 0.4) breakAt = (last.index ?? 0) + last[0].length;
+      }
+    }
+
+    if (breakAt < 0) {
+      const spIdx = window.lastIndexOf(' ');
+      if (spIdx >= safeSize * 0.4) breakAt = spIdx + 1;
+    }
+
+    if (breakAt < 0) breakAt = safeSize;
+
+    const chunk = t.slice(start, start + breakAt).trim();
+    if (chunk) chunks.push(chunk);
+    const nextStart = start + breakAt;
+    start = Math.max(start + 1, nextStart - safeOverlap);
+  }
+
+  return chunks;
+}
+
+/** Cosine similarity between two equal-length vectors. */
+export function cosineSim(a: number[], b: number[]): number {
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1);
+}
+
+export const EMBEDDING_NAME_RE =
+  /embed|bge|nomic|gte|e5|minilm|mxbai|jina|snowflake|arctic|sentence|instructor|multilingual-e5|granite-embedding/i;
+
+/** Preferred embedding models in priority order; nomic is the default. */
+const PREFERRED_EMBEDDING_PATTERNS = [
+  /nomic/i,
+  /mxbai/i,
+  /bge/i,
+  /gte/i,
+  /(^|[^a-z])e5([^a-z]|$)|multilingual-e5/i,
+  /embeddinggemma|gemma-embed/i,
+  /snowflake|arctic/i,
+  /jina/i,
+];
+
+/** Picks the highest-priority known embedding model, else the first one given. */
+function pickPreferred(models: string[]): string | null {
+  if (models.length === 0) return null;
+  for (const pattern of PREFERRED_EMBEDDING_PATTERNS) {
+    const match = models.find((m) => pattern.test(m));
+    if (match) return match;
+  }
+  return models[0];
+}
+
+/**
+ * Resolves the embedding model: the user-set override if present, otherwise a
+ * preferred model (nomic first, then known alternatives, then any available)
+ * from the server's embedding-model list.
+ */
+export function resolveEmbeddingModel(override: string, embeddingModels: string[]): string | null {
+  const stored = override.trim();
+  if (stored) return stored;
+  return pickPreferred(embeddingModels);
+}
+
+/**
+ * Fetches embedding vectors for a batch of texts from the local server's
+ * OpenAI-compatible `/v1/embeddings` endpoint. Inputs are sent in batches of
+ * {@link EMBEDDING_BATCH_SIZE} so a large document doesn't produce one request
+ * the local server rejects or times out on.
+ */
+export async function fetchEmbeddings(
+  baseUrl: string,
+  texts: string[],
+  model: string,
+  signal?: AbortSignal,
+): Promise<number[][]> {
+  const base = baseUrl.replace(/\/+$/, '');
+  const vectors: number[][] = [];
+  for (let start = 0; start < texts.length; start += EMBEDDING_BATCH_SIZE) {
+    const batch = texts.slice(start, start + EMBEDDING_BATCH_SIZE);
+    const res = await fetch(`${base}/v1/embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ model, input: batch }),
+      signal,
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Embeddings request failed: HTTP ${res.status} — ${err.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    const rows = Array.isArray(data?.data) ? (data.data as { index: number; embedding: number[] }[]) : [];
+    if (rows.length !== batch.length) {
+      throw new Error(`Embeddings response returned ${rows.length} vector(s) for ${batch.length} input(s)`);
+    }
+    const ordered = rows.slice().sort((a, b) => a.index - b.index);
+    const dimensions = ordered[0]?.embedding?.length || 0;
+    const valid =
+      dimensions > 0 &&
+      ordered.every(
+        (row, index) =>
+          row.index === index &&
+          Array.isArray(row.embedding) &&
+          row.embedding.length === dimensions &&
+          row.embedding.every(Number.isFinite),
+      );
+    if (!valid) {
+      throw new Error('Embeddings response contained missing, malformed, or inconsistent vectors');
+    }
+    vectors.push(...ordered.map((row) => row.embedding));
+  }
+  return vectors;
+}

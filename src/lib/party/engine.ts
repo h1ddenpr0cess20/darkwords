@@ -271,11 +271,18 @@ class PartyEngine {
     this.host?.setStatus(status, this.config);
   }
 
+  /** Formats one `Name: text` history line, or null when there is nothing to say. */
+  private formatHistoryLine(name: string, text: string): string | null {
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    return `${name.trim() || 'Speaker'}: ${trimmed}`;
+  }
+
   /** Rebuilds the rolling prompt buffer from the conversation already on screen. */
   private seedHistory(): string[] {
     const lines = (this.host?.readTranscript() ?? [])
-      .filter((l) => l.text.trim())
-      .map((l) => `${l.role === 'user' ? this.userName : l.name || 'Speaker'}: ${l.text.trim()}`);
+      .map((l) => this.formatHistoryLine(l.role === 'user' ? this.userName : l.name, l.text))
+      .filter((l): l is string => l !== null);
     return lines.slice(-HISTORY_BUFFER_LIMIT);
   }
 
@@ -413,9 +420,9 @@ class PartyEngine {
   }
 
   private recordHistoryEntry(name: string, content: string): void {
-    const trimmed = content.trim();
-    if (!trimmed) return;
-    this.history.push(`${name.trim() || 'Speaker'}: ${trimmed}`);
+    const line = this.formatHistoryLine(name, content);
+    if (!line) return;
+    this.history.push(line);
     if (this.history.length > HISTORY_BUFFER_LIMIT) {
       this.history.splice(0, this.history.length - HISTORY_BUFFER_LIMIT);
     }

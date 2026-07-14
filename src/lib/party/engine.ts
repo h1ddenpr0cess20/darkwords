@@ -112,6 +112,23 @@ class PartyEngine {
     return this.config;
   }
 
+  /**
+   * Loads a saved config as a stopped party without starting the turn loop —
+   * used to restore resumability after a reload or a conversation switch. A
+   * live party is never clobbered this way; the caller is expected to have
+   * stopped whatever was running first.
+   */
+  hydrate(config: PartyConfig): void {
+    if (this.running) return;
+    this.characters = config.characters;
+    this.scenario = config.scenario;
+    this.userName = config.userName?.trim() || DEFAULT_USER_NAME;
+    this.documents = config.documents ? [...config.documents] : [];
+    this.config = { ...config, userName: this.userName, documents: this.documents };
+    this.history = [];
+    this.publish();
+  }
+
   /** Starts (or restarts) the turn loop for a cast. */
   async start(config: PartyConfig): Promise<void> {
     const host = this.host;

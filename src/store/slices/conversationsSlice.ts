@@ -2,7 +2,7 @@ import type { Conversation } from '../../types';
 import { makeId } from '../../lib/id';
 import { clearDocIndex } from '../../lib/rag/retrieval';
 import { emptyConversation, firstConversation, patchMessage, withConvo } from '../helpers';
-import { endRunningParty } from './partySlice';
+import { endRunningParty, loadPartyForConversation } from './partySlice';
 import type { SliceCreator } from '../types';
 
 /**
@@ -53,28 +53,28 @@ export const createConversationsSlice: SliceCreator<ConversationsSlice> = (set, 
 
   selectConversation: (id) => {
     const party = endRunningParty(get());
-    set({ ...party, activeConvoId: id, activePanel: null });
+    const resumed = loadPartyForConversation(get().conversations[id]);
+    set({ ...party, ...resumed, activeConvoId: id, activePanel: null });
   },
 
   deleteConversation: (id) => {
     clearDocIndex(id);
-    const party = get().activeConvoId === id ? endRunningParty(get()) : {};
-    set((s) => {
-      const conversations = { ...s.conversations };
-      delete conversations[id];
-      let order = s.conversationOrder.filter((x) => x !== id);
-      if (order.length === 0) {
-        const c = emptyConversation();
-        conversations[c.id] = c;
-        order = [c.id];
-      }
-      return {
-        ...party,
-        conversations,
-        conversationOrder: order,
-        activeConvoId: s.activeConvoId === id ? order[0] : s.activeConvoId,
-      };
-    });
+    const wasActive = get().activeConvoId === id;
+    const party = wasActive ? endRunningParty(get()) : {};
+
+    const s = get();
+    const conversations = { ...s.conversations };
+    delete conversations[id];
+    let order = s.conversationOrder.filter((x) => x !== id);
+    if (order.length === 0) {
+      const c = emptyConversation();
+      conversations[c.id] = c;
+      order = [c.id];
+    }
+    const activeConvoId = wasActive ? order[0] : s.activeConvoId;
+    const resumed = wasActive ? loadPartyForConversation(conversations[activeConvoId]) : {};
+
+    set({ ...party, ...resumed, conversations, conversationOrder: order, activeConvoId });
   },
 
   toggleThinking: (msgId) =>

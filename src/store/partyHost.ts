@@ -120,8 +120,19 @@ const host: PartyHost = {
     return completeOnce({ ...apiTarget(s), model: activeModel(s), prompt, signal });
   },
 
+  /**
+   * Publishes engine status to the store and, whenever a config is active,
+   * snapshots it onto the conversation it belongs to — that's what lets a
+   * stopped party be resumed after a reload. Leaving party mode passes
+   * `config: null` and is handled separately, by `leaveParty`, so a mere
+   * conversation switch (which also stops the loop) never erases it here.
+   */
   setStatus(status, config) {
-    useAppStore.setState({ partyStatus: status, activeParty: config });
+    useAppStore.setState((s) => ({
+      partyStatus: status,
+      activeParty: config,
+      ...(config ? withConvo(s, s.activeConvoId, (c) => ({ ...c, partyConfig: config })) : {}),
+    }));
   },
 
   onError(message) {

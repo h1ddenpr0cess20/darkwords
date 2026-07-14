@@ -1,3 +1,5 @@
+import type { PartyConfig } from '../lib/party/types';
+
 export type Role = 'user' | 'assistant';
 
 /** A file attached to a message, stored inline as a data URL. */
@@ -93,6 +95,8 @@ export interface Conversation {
   messages: ChatMessage[];
   createdAt: number;
   updatedAt: number;
+  /** The cast/scenario last active in this conversation, kept so a party can be resumed after a reload or a conversation switch. */
+  partyConfig?: PartyConfig;
 }
 
 export type ThemeId =

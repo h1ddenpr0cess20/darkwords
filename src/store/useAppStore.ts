@@ -8,7 +8,7 @@ import { createUiSlice } from './slices/uiSlice';
 import { createSettingsSlice } from './slices/settingsSlice';
 import { createLibrarySlice } from './slices/librarySlice';
 import { createDataSlice } from './slices/dataSlice';
-import { createPartySlice } from './slices/partySlice';
+import { createPartySlice, loadPartyForConversation } from './slices/partySlice';
 import { createConversationsSlice } from './slices/conversationsSlice';
 import { createChatSlice } from './slices/chatSlice';
 import './partyHost';
@@ -19,8 +19,11 @@ export type { AppState } from './types';
  * The app store: all slices combined, persisted to IndexedDB. `partialize`
  * keeps only durable state — transient flags (streaming, panels, party status)
  * are rebuilt on load, and a party `promptMode` is normalized back to
- * `personality` since parties don't survive a reload. `migrate` upgrades older
- * persisted shapes; bump `version` when the persisted shape changes.
+ * `personality` at save time. Once the store rehydrates, `onRehydrateStorage`
+ * re-derives party state from whatever the active conversation last saved
+ * (see `partyConfig` on `Conversation`), so a party conversation reopens as a
+ * stopped, resumable party rather than an inert transcript. `migrate` upgrades
+ * older persisted shapes; bump `version` when the persisted shape changes.
  */
 export const useAppStore = create<AppState>()(
   persist(
@@ -86,6 +89,11 @@ export const useAppStore = create<AppState>()(
           }
         }
         return state;
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const resumed = loadPartyForConversation(state.conversations[state.activeConvoId]);
+        if (Object.keys(resumed).length) useAppStore.setState(resumed);
       },
     },
   ),

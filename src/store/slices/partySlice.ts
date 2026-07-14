@@ -8,7 +8,8 @@ import {
   type PartyStatus,
   type PartyToolKey,
 } from '../../lib/party/types';
-import { emptyConversation } from '../helpers';
+import { emptyConversation, withConvo } from '../helpers';
+import type { Conversation } from '../../types';
 import type { AppState, SliceCreator } from '../types';
 
 /**
@@ -37,7 +38,7 @@ export interface PartySlice {
   /** Resumes a paused party, or restarts a stopped one with its previous config. */
   resumeParty: () => void;
   stopParty: () => void;
-  /** Exits party mode entirely, clearing the engine's config. */
+  /** Exits party mode entirely, clearing the engine's config and its saved conversation. */
   leaveParty: () => void;
 }
 
@@ -45,17 +46,30 @@ export interface PartySlice {
 const CHARACTER_COLORS = ['#7EE787', '#E8B54D', '#8FB9FF', '#E88484', '#C99BFF', '#5FD9C4'];
 
 /**
- * Tears down a running party and returns the state patch that goes with it.
+ * Stops a running party and returns the state patch that goes with it.
  *
- * The engine writes each line into whatever conversation is active at the moment
- * it writes, so a party only holds together while its own conversation stays
- * open. Anything that changes the active conversation ends the party instead of
- * letting its dialogue spill into an unrelated chat.
+ * The engine writes each line into whatever conversation is active at the
+ * moment it writes, so a party only holds together while its own conversation
+ * stays open. Anything that changes the active conversation stops the party
+ * instead of letting its dialogue spill into an unrelated chat — its cast and
+ * scenario stay saved on that conversation (see `setStatus` in partyHost.ts),
+ * so switching back to it, or reloading the page, can resume it.
  */
 export function endRunningParty(s: AppState): Partial<AppState> {
   if (s.partyStatus === 'off') return {};
   partyEngine.reset();
   return { promptMode: 'personality' };
+}
+
+/**
+ * Restores a conversation's saved party as a stopped, resumable one — used
+ * when that conversation becomes active, whether by switching to it or by
+ * reloading the page. A no-op when it never held a party.
+ */
+export function loadPartyForConversation(convo: Conversation | undefined): Partial<AppState> {
+  if (!convo?.partyConfig) return {};
+  partyEngine.hydrate(convo.partyConfig);
+  return { promptMode: 'party' };
 }
 
 export const createPartySlice: SliceCreator<PartySlice> = (set, get) => ({
@@ -145,8 +159,14 @@ export const createPartySlice: SliceCreator<PartySlice> = (set, get) => ({
     if (config) void partyEngine.start(config);
   },
   stopParty: () => partyEngine.stop(),
+  /**
+   * Unlike stop/pause, leaving is a deliberate abandonment: it also drops the
+   * saved config from the conversation, so it won't come back as a resumable
+   * party on the next visit or reload.
+   */
   leaveParty: () => {
+    const cid = get().activeConvoId;
     partyEngine.reset();
-    set({ promptMode: 'personality' });
+    set((s) => ({ promptMode: 'personality', ...withConvo(s, cid, (c) => ({ ...c, partyConfig: undefined })) }));
   },
 });

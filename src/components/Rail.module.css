@@ -136,7 +136,6 @@
   overflow-wrap: anywhere;
 }
 
-/* Bottom-bar layout on small screens. */
 @media (max-width: 720px) {
   .rail {
     width: 100%;

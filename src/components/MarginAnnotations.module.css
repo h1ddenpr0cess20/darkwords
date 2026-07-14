@@ -44,7 +44,6 @@
   overflow-y: auto;
 }
 
-/* Keep rendered markdown at the trace's muted, small scale. */
 .thinkingText > div {
   font-size: 12px;
   line-height: 1.6;
@@ -77,7 +76,6 @@
   margin-top: 7px;
 }
 
-/* Tool calls sit inside the reasoning disclosure, not beside it. */
 .tool {
   display: flex;
   flex-direction: column;

@@ -70,8 +70,6 @@ export function MessageActions({ message }: { message: ChatMessage }) {
         </button>
       )}
 
-      {/* The party engine owns its own turn loop; regenerating a single turn
-          out from under it would desynchronise the transcript. */}
       {isAssistant && !inParty && (
         <button
           className={styles.btn}

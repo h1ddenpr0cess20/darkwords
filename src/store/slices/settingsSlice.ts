@@ -84,7 +84,6 @@ export const createSettingsSlice: SliceCreator<SettingsSlice> = (set, get) => ({
   setLmStudioUrl: (url) => set({ lmStudioUrl: url.trim().replace(/\/+$/, '') }),
   setEmbeddingModelId: (id) => set({ embeddingModelId: id }),
 
-  // Only LM Studio has anything to fetch — the Anthropic catalog is fixed.
   refreshModels: async () => {
     const s = get();
     if (s.provider !== 'lmstudio') return;
@@ -94,7 +93,6 @@ export const createSettingsSlice: SliceCreator<SettingsSlice> = (set, get) => ({
       set((st) => ({
         lmStudioModels: catalog.chat,
         embeddingModels: catalog.embeddings,
-        // Auto-select the first model when none is chosen or the choice vanished.
         lmStudioModelId:
           st.lmStudioModelId && catalog.chat.some((m) => m.id === st.lmStudioModelId)
             ? st.lmStudioModelId

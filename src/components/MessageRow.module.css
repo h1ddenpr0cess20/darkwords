@@ -104,8 +104,6 @@
   animation: dw-dot 1.1s infinite ease-in-out;
 }
 
-/* Keyframes must live in the module that references them — CSS Modules scopes
-   animation names, so a name defined in a global sheet never resolves here. */
 @keyframes dw-fade {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
@@ -141,7 +139,6 @@
   line-height: 1.45;
 }
 
-/* Single column on small screens: margin annotations flow under the message. */
 @media (max-width: 720px) {
   .row {
     grid-template-columns: 1fr;

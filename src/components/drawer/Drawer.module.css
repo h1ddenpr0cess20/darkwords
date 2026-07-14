@@ -5,7 +5,6 @@
   z-index: 39;
 }
 
-/* Sits flush against the icon rail, which is on the left. */
 .panel {
   position: absolute;
   top: 0;
@@ -21,7 +20,6 @@
   animation: dw-slide-in .22s ease;
 }
 
-/* Full-width sheet above the bottom rail on small screens. */
 @media (max-width: 720px) {
   .panel {
     left: 0;

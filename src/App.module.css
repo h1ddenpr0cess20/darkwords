@@ -9,7 +9,6 @@
   position: relative;
 }
 
-/* On small screens the icon rail moves to the bottom edge. */
 @media (max-width: 720px) {
   .app {
     flex-direction: column-reverse;

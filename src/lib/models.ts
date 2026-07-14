@@ -27,7 +27,6 @@ export function anthropicModelDef(id: string, displayName?: string): ModelDef {
   };
 }
 
-/** The Anthropic catalog is fixed; only LM Studio's is fetched from a server. */
 export const ANTHROPIC_MODELS: ModelDef[] = [
   {
     id: 'claude-fable-5',
@@ -118,9 +117,6 @@ interface LmStudioV1Model {
 export async function fetchLmStudioModels(baseUrl: string): Promise<ModelCatalog> {
   const base = baseUrl.replace(/\/+$/, '');
 
-  // /api/v1/models reports per-model capabilities, including whether the model
-  // can reason; /api/v0/models labels each model llm/vlm/embeddings; the
-  // OpenAI-compatible /v1/models (ids only) is the last resort.
   try {
     const res = await fetch(`${base}/api/v1/models`);
     if (res.ok) {
@@ -144,9 +140,7 @@ export async function fetchLmStudioModels(baseUrl: string): Promise<ModelCatalog
         return { chat, embeddings };
       }
     }
-  } catch {
-    // fall through to /api/v0/models
-  }
+  } catch {}
 
   try {
     const res = await fetch(`${base}/api/v0/models`);
@@ -163,9 +157,7 @@ export async function fetchLmStudioModels(baseUrl: string): Promise<ModelCatalog
         return { chat, embeddings };
       }
     }
-  } catch {
-    // fall through to /v1/models
-  }
+  } catch {}
 
   const res = await fetch(`${base}/v1/models`);
   if (!res.ok) throw new Error(`LM Studio not reachable at ${base} (HTTP ${res.status})`);

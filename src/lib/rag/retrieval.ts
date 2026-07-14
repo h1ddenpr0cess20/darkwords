@@ -131,7 +131,6 @@ export async function indexAttachments(
         failed.push(att.name);
         continue;
       }
-      // Re-attaching a name replaces its old chunks instead of duplicating it.
       idx.chunks = idx.chunks.filter((c) => c.name !== att.name);
       for (const chunk of chunks) pending.push({ name: att.name, text: chunk });
       indexed++;

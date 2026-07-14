@@ -7,7 +7,6 @@
   transition: opacity .12s;
 }
 
-/* Revealed on hover so the feed stays clean while reading. */
 :global(.dw-row):hover .actions,
 .actions:focus-within {
   opacity: 1;

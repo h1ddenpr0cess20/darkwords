@@ -316,8 +316,6 @@ class PartyEngine {
     } catch (err) {
       const aborted = this.abort || (err instanceof DOMException && err.name === 'AbortError');
       if (!aborted) {
-        // Drop the speaker's bubble so it doesn't sit spinning forever; the
-        // run loop's catch posts the error bubble.
         host.discardMessage(messageId);
         throw err;
       }

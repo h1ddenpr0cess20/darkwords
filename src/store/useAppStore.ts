@@ -11,7 +11,6 @@ import { createDataSlice } from './slices/dataSlice';
 import { createPartySlice } from './slices/partySlice';
 import { createConversationsSlice } from './slices/conversationsSlice';
 import { createChatSlice } from './slices/chatSlice';
-// Registers the store as the party engine's host (side effect at module load).
 import './partyHost';
 
 export type { AppState } from './types';
@@ -69,7 +68,6 @@ export const useAppStore = create<AppState>()(
           };
         }
         if (version < 4) {
-          // Model ids were aliases ('opus'); they are now the API model ids.
           const aliases: Record<string, string> = {
             opus: 'claude-opus-4-8',
             sonnet: 'claude-sonnet-5',

@@ -44,13 +44,6 @@ function run<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequ
   );
 }
 
-/**
- * Writes are debounced: the persist middleware serializes the whole store on
- * every setState, which during streaming means one multi-megabyte JSON string
- * per token delta. Only the latest value per key is kept and written after a
- * quiet period (or when the page is hidden), so streaming costs one IndexedDB
- * write instead of hundreds.
- */
 const WRITE_DEBOUNCE_MS = 500;
 
 const pendingWrites = new Map<string, { value: string; timer: ReturnType<typeof setTimeout> }>();

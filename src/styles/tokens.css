@@ -27,12 +27,10 @@
   --font-serif: 'Newsreader', serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* accent themes */
   --accent-ink: #7ee787;
   --accent-ember: #e8b54d;
   --accent-dusk: #8fb9ff;
 
-  /* persona palette (party mode) */
   --persona-nyx: #7ee787;
   --persona-cato: #e8b54d;
   --persona-vex: #8fb9ff;

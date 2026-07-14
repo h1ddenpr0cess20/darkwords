@@ -116,12 +116,31 @@ export function makeThinkTagDemux(onText: (delta: string) => void, onThinking: (
  * processed document needs a follow-up Files API round trip before it can be
  * shown or saved.
  */
-async function fetchGeneratedFile(client: Anthropic, fileId: string): Promise<Attachment | null> {
+async function fetchGeneratedFile(apiKey: string, fileId: string): Promise<Attachment | null> {
   try {
-    const [metadata, response] = await Promise.all([
-      client.beta.files.retrieveMetadata(fileId),
-      client.beta.files.download(fileId),
+    const path = `/api/anthropic/v1/files/${encodeURIComponent(fileId)}`;
+    const headers = {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-beta': 'files-api-2025-04-14',
+    };
+    const [metadataResponse, response] = await Promise.all([
+      fetch(`${path}?beta=true`, { headers }),
+      fetch(`${path}/content?beta=true`, { headers: { ...headers, Accept: 'application/binary' } }),
     ]);
+
+    if (!metadataResponse.ok) {
+      throw new Error(`File metadata request failed (${metadataResponse.status})`);
+    }
+    if (!response.ok) {
+      throw new Error(`File download failed (${response.status})`);
+    }
+
+    const metadata = (await metadataResponse.json()) as {
+      filename: string;
+      mime_type: string;
+      size_bytes: number;
+    };
     const dataUrl = await blobToDataUrl(await response.blob());
     return { id: fileId, name: metadata.filename, mimeType: metadata.mime_type, size: metadata.size_bytes, dataUrl };
   } catch (err) {
@@ -344,7 +363,7 @@ export async function streamAssistantTurn(opts: {
 
     const fileIds = collectGeneratedFileIds(finalMessage.content);
     if (fileIds.length) {
-      const files = await Promise.all(fileIds.map((id) => fetchGeneratedFile(client, id)));
+      const files = await Promise.all(fileIds.map((id) => fetchGeneratedFile(apiKey, id)));
       for (const file of files) if (file) callbacks.onFileOutput?.(file);
     }
 

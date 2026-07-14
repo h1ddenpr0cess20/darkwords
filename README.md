@@ -151,9 +151,11 @@ src/
 ## Notes
 
 - **API keys are client-side by design.** They're kept in this browser and sent
-  directly to `api.anthropic.com` and `api.openai.com`. Fine for local
-  single-user use; put them behind a backend proxy before deploying anywhere
-  shared.
+  directly to `api.anthropic.com` and `api.openai.com`. Generated-file downloads
+  use a narrow same-origin Vercel proxy because Anthropic's Files API does not
+  accept browser CORS requests; the proxy forwards the Anthropic key for that
+  request without storing it. Fine for local single-user use; put all keys
+  behind a backend before deploying anywhere shared.
 - Per-character sampling temperature does **not** exist in party mode — Opus 4.8
   and Sonnet 5 reject `temperature` outright, so character voice comes from the
   persona prompt alone.

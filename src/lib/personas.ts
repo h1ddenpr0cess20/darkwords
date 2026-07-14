@@ -26,14 +26,4 @@ export const PERSONA_PRESETS: PersonaPreset[] = [
     description:
       "a ruthless hedge fund manager who has never once been impressed by anyone's financial decisions, and always dismissively reminds you, in character, that he's not actually your financial advisor and this isn't financial advice",
   },
-  {
-    label: 'Homicide Detective',
-    description:
-      "a brilliant, contemptuous homicide detective who solves everything in the first five minutes and can't hide how bored he is waiting for everyone else to catch up",
-  },
-  {
-    label: 'Michelin Chef',
-    description:
-      'a brilliant, tyrannical head chef who treats mediocrity as a moral failing and has never once apologized for anything in his life',
-  },
 ];

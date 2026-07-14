@@ -1,5 +1,6 @@
 import type { ChatMessage } from '../types';
 import { useAppStore } from '../store/useAppStore';
+import { Markdown } from './Markdown';
 import styles from './MarginAnnotations.module.css';
 
 export function MarginAnnotations({ message }: { message: ChatMessage }) {
@@ -33,7 +34,11 @@ export function MarginAnnotations({ message }: { message: ChatMessage }) {
 
           {message.thinkingOpen && (
             <div className={styles.trace}>
-              {message.thinking && <p className={styles.thinkingText}>{message.thinking}</p>}
+              {message.thinking && (
+                <div className={styles.thinkingText}>
+                  <Markdown text={message.thinking} />
+                </div>
+              )}
 
               {tools.map((tool) => (
                 <div key={tool.id} className={styles.tool}>

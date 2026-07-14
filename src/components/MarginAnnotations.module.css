@@ -40,6 +40,34 @@
   font-size: 12px;
   line-height: 1.6;
   color: var(--text-5);
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+/* Keep rendered markdown at the trace's muted, small scale. */
+.thinkingText > div {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-5);
+}
+
+.thinkingText > div h1,
+.thinkingText > div h2,
+.thinkingText > div h3,
+.thinkingText > div h4 {
+  font-size: 12.5px;
+  margin: 10px 0 4px;
+  color: var(--text-3);
+}
+
+.thinkingText > div strong {
+  color: var(--text-3);
+}
+
+.thinkingText > div p,
+.thinkingText > div ul,
+.thinkingText > div ol {
+  margin-bottom: 8px;
 }
 
 .trace {

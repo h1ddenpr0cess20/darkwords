@@ -8,8 +8,9 @@ export function TopStrip() {
 
   if (!conversation) return null;
 
-  // A turn is one user→assistant exchange, so count the user messages.
-  const turns = conversation.messages.filter((m) => m.role === 'user').length;
+  // In ordinary chat a turn is one user→assistant exchange, so count the user
+  // messages. In a party every spoken message is its own turn.
+  const turns = conversation.messages.filter((m) => !m.error && (party || m.role === 'user')).length;
 
   return (
     <div className={styles.strip}>

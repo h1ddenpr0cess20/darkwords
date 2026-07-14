@@ -32,16 +32,22 @@ export function Lightbox() {
   return (
     <div className={styles.overlay} onClick={close} role="dialog" aria-modal="true">
       <div className={styles.inner} onClick={(e) => e.stopPropagation()}>
-        <img className={styles.image} src={image.src} alt={image.label} />
         <div className={styles.bar}>
-          <span className={styles.caption}>{image.label}</span>
-          <button className={styles.btn} onClick={download}>
-            Download
+          <button className={styles.btn} onClick={download} title="Download">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3v12" />
+              <path d="M7 11l5 5 5-5" />
+              <path d="M5 21h14" />
+            </svg>
           </button>
-          <button className={styles.btn} onClick={close}>
-            Close
+          <button className={styles.btn} onClick={close} title="Close">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
           </button>
         </div>
+        <img className={styles.image} src={image.src} alt={image.label} />
+        {image.label && <span className={styles.caption}>{image.label}</span>}
       </div>
     </div>
   );

@@ -92,6 +92,14 @@ export interface ChatMessage {
   variantIndex?: number;
 }
 
+/** The prompt-mode/persona settings a conversation was last using, restored when it becomes active again. */
+export interface PersonaSnapshot {
+  promptMode: PromptMode;
+  personalityName: string;
+  customPrompt: string;
+  verbose: boolean;
+}
+
 export interface Conversation {
   id: string;
   title: string;
@@ -100,6 +108,8 @@ export interface Conversation {
   updatedAt: number;
   /** The cast/scenario last active in this conversation, kept so a party can be resumed after a reload or a conversation switch. */
   partyConfig?: PartyConfig;
+  /** Superseded by `partyConfig` when both are present (see loadPersonaForConversation). */
+  personaSnapshot?: PersonaSnapshot;
 }
 
 export type ThemeId =

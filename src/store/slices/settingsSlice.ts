@@ -1,4 +1,4 @@
-import type { Effort, ModelDef, ModelId, PromptMode, Provider, ThemeId, ToolsEnabled } from '../../types';
+import type { Conversation, Effort, ModelDef, ModelId, PersonaSnapshot, PromptMode, Provider, ThemeId, ToolsEnabled } from '../../types';
 import { DEFAULT_PERSONALITY_NAME } from '../../lib/prompt';
 import {
   ANTHROPIC_MODELS,
@@ -6,7 +6,32 @@ import {
   DEFAULT_LM_STUDIO_URL,
   fetchLmStudioModels,
 } from '../../lib/models';
-import type { SliceCreator } from '../types';
+import { withConvo } from '../helpers';
+import type { AppState, SliceCreator } from '../types';
+
+/** The prompt-mode/persona settings currently in effect, in the shape saved on a conversation. */
+export function currentPersonaSnapshot(
+  s: Pick<AppState, 'promptMode' | 'personalityName' | 'customPrompt' | 'verbose'>,
+): PersonaSnapshot {
+  return { promptMode: s.promptMode, personalityName: s.personalityName, customPrompt: s.customPrompt, verbose: s.verbose };
+}
+
+/**
+ * Restores a conversation's saved prompt-mode/persona settings — used when it
+ * becomes active, mirroring `loadPartyForConversation`. A no-op when it never
+ * had one (conversations predating this feature) or when a party claims it
+ * instead, since that's restored separately and takes priority.
+ */
+export function loadPersonaForConversation(convo: Conversation | undefined): Partial<AppState> {
+  if (!convo?.personaSnapshot || convo.partyConfig) return {};
+  return { ...convo.personaSnapshot };
+}
+
+/** Patches `activeConvoId`'s saved persona to match settings about to take effect. */
+function snapshotPersonaPatch(s: AppState, overrides: Partial<PersonaSnapshot> = {}): Partial<AppState> {
+  const snapshot = { ...currentPersonaSnapshot(s), ...overrides };
+  return withConvo(s, s.activeConvoId, (c) => ({ ...c, personaSnapshot: snapshot }));
+}
 
 /** Provider, model, tools, prompt, and appearance settings. */
 export interface SettingsSlice {
@@ -123,9 +148,15 @@ export const createSettingsSlice: SliceCreator<SettingsSlice> = (set, get) => ({
   setImageApiKey: (key) => set({ imageApiKey: key.trim() }),
   setEffort: (effort) => set({ effort }),
 
-  setPromptMode: (mode) => set({ promptMode: mode }),
-  setPersonalityName: (name) => set({ personalityName: name }),
-  setCustomPrompt: (text) => set({ customPrompt: text }),
-  toggleVerbose: () => set((s) => ({ verbose: !s.verbose })),
-  resetPersonality: () => set({ personalityName: DEFAULT_PERSONALITY_NAME, verbose: false }),
+  setPromptMode: (mode) => set((s) => ({ promptMode: mode, ...snapshotPersonaPatch(s, { promptMode: mode }) })),
+  setPersonalityName: (name) =>
+    set((s) => ({ personalityName: name, ...snapshotPersonaPatch(s, { personalityName: name }) })),
+  setCustomPrompt: (text) => set((s) => ({ customPrompt: text, ...snapshotPersonaPatch(s, { customPrompt: text }) })),
+  toggleVerbose: () => set((s) => ({ verbose: !s.verbose, ...snapshotPersonaPatch(s, { verbose: !s.verbose }) })),
+  resetPersonality: () =>
+    set((s) => ({
+      personalityName: DEFAULT_PERSONALITY_NAME,
+      verbose: false,
+      ...snapshotPersonaPatch(s, { personalityName: DEFAULT_PERSONALITY_NAME, verbose: false }),
+    })),
 });

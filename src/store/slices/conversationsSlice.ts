@@ -3,6 +3,7 @@ import { makeId } from '../../lib/id';
 import { clearDocIndex } from '../../lib/rag/retrieval';
 import { emptyConversation, firstConversation, patchMessage, withConvo } from '../helpers';
 import { endRunningParty, loadPartyForConversation } from './partySlice';
+import { currentPersonaSnapshot, loadPersonaForConversation } from './settingsSlice';
 import type { SliceCreator } from '../types';
 
 /**
@@ -40,7 +41,8 @@ export const createConversationsSlice: SliceCreator<ConversationsSlice> = (set, 
       if (current && current.messages.length === 0) {
         return { ...party, activePanel: null };
       }
-      const c = emptyConversation();
+      // party's promptMode patch (if any) hasn't landed in `s` yet — it's still queued in this same update.
+      const c = { ...emptyConversation(), personaSnapshot: currentPersonaSnapshot({ ...s, ...party }) };
       return {
         ...party,
         conversations: { ...s.conversations, [c.id]: c },
@@ -53,8 +55,10 @@ export const createConversationsSlice: SliceCreator<ConversationsSlice> = (set, 
 
   selectConversation: (id) => {
     const party = endRunningParty(get());
-    const resumed = loadPartyForConversation(get().conversations[id]);
-    set({ ...party, ...resumed, activeConvoId: id, activePanel: null });
+    const convo = get().conversations[id];
+    const resumed = loadPartyForConversation(convo);
+    const persona = loadPersonaForConversation(convo);
+    set({ ...party, ...persona, ...resumed, activeConvoId: id, activePanel: null });
   },
 
   deleteConversation: (id) => {
@@ -72,9 +76,11 @@ export const createConversationsSlice: SliceCreator<ConversationsSlice> = (set, 
       order = [c.id];
     }
     const activeConvoId = wasActive ? order[0] : s.activeConvoId;
-    const resumed = wasActive ? loadPartyForConversation(conversations[activeConvoId]) : {};
+    const targetConvo = wasActive ? conversations[activeConvoId] : undefined;
+    const resumed = wasActive ? loadPartyForConversation(targetConvo) : {};
+    const persona = wasActive ? loadPersonaForConversation(targetConvo) : {};
 
-    set({ ...party, ...resumed, conversations, conversationOrder: order, activeConvoId });
+    set({ ...party, ...persona, ...resumed, conversations, conversationOrder: order, activeConvoId });
   },
 
   toggleThinking: (msgId) =>
@@ -97,6 +103,7 @@ export const createConversationsSlice: SliceCreator<ConversationsSlice> = (set, 
       messages: source.messages.slice(0, cut + 1).map((m) => ({ ...m, id: makeId('m') })),
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      personaSnapshot: source.personaSnapshot ?? currentPersonaSnapshot(s),
     };
 
     set((st) => ({

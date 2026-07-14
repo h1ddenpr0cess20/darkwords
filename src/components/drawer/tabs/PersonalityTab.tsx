@@ -63,8 +63,8 @@ export function PersonalityTab() {
             value=""
             onChange={(e) => {
               if (!e.target.value) return;
-              setPersonalityName(e.target.value);
               newConversation();
+              setPersonalityName(e.target.value);
             }}
           >
             <option value="">Choose a persona…</option>
@@ -89,8 +89,8 @@ export function PersonalityTab() {
             <button
               className={styles.secondaryBtn}
               onClick={() => {
-                resetPersonality();
                 newConversation();
+                resetPersonality();
               }}
             >
               Reset to default

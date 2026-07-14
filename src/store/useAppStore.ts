@@ -5,7 +5,7 @@ import type { GalleryItem } from '../types';
 import { firstConversation } from './helpers';
 import type { AppState } from './types';
 import { createUiSlice } from './slices/uiSlice';
-import { createSettingsSlice } from './slices/settingsSlice';
+import { createSettingsSlice, loadPersonaForConversation } from './slices/settingsSlice';
 import { createLibrarySlice } from './slices/librarySlice';
 import { createDataSlice } from './slices/dataSlice';
 import { createPartySlice, loadPartyForConversation } from './slices/partySlice';
@@ -22,8 +22,11 @@ export type { AppState } from './types';
  * `personality` at save time. Once the store rehydrates, `onRehydrateStorage`
  * re-derives party state from whatever the active conversation last saved
  * (see `partyConfig` on `Conversation`), so a party conversation reopens as a
- * stopped, resumable party rather than an inert transcript. `migrate` upgrades
- * older persisted shapes; bump `version` when the persisted shape changes.
+ * stopped, resumable party rather than an inert transcript — and, when there's
+ * no party, restores that conversation's own prompt-mode/persona settings
+ * (see `personaSnapshot`) instead of leaving whatever was last active
+ * elsewhere. `migrate` upgrades older persisted shapes; bump `version` when
+ * the persisted shape changes.
  */
 export const useAppStore = create<AppState>()(
   persist(
@@ -92,8 +95,11 @@ export const useAppStore = create<AppState>()(
       },
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        const resumed = loadPartyForConversation(state.conversations[state.activeConvoId]);
-        if (Object.keys(resumed).length) useAppStore.setState(resumed);
+        const convo = state.conversations[state.activeConvoId];
+        const resumed = loadPartyForConversation(convo);
+        const persona = loadPersonaForConversation(convo);
+        const patch = { ...persona, ...resumed };
+        if (Object.keys(patch).length) useAppStore.setState(patch);
       },
     },
   ),

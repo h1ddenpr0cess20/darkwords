@@ -11,3 +11,9 @@
   flex-direction: column;
   gap: 30px;
 }
+
+@media (max-width: 720px) {
+  .feed {
+    padding: 6px 16px 120px;
+  }
+}

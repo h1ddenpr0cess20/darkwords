@@ -1,11 +1,19 @@
 .app {
   width: 100%;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   background: var(--bg);
   font-family: var(--font-sans);
   overflow: hidden;
   position: relative;
+}
+
+/* On small screens the icon rail moves to the bottom edge. */
+@media (max-width: 720px) {
+  .app {
+    flex-direction: column-reverse;
+  }
 }
 
 .main {

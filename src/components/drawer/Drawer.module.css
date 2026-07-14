@@ -21,6 +21,21 @@
   animation: dw-slide-in .22s ease;
 }
 
+/* Full-width sheet above the bottom rail on small screens. */
+@media (max-width: 720px) {
+  .panel {
+    left: 0;
+    bottom: 58px;
+    width: 100%;
+    max-width: 100%;
+    border-right: none;
+  }
+
+  .overlay {
+    bottom: 58px;
+  }
+}
+
 @keyframes dw-slide-in {
   from {
     opacity: 0;

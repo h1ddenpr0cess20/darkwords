@@ -62,7 +62,9 @@
   position: absolute;
   left: 46px;
   bottom: 0;
-  width: 200px;
+  width: 250px;
+  max-height: 60vh;
+  overflow-y: auto;
   background: var(--field-bg);
   border: 1px solid var(--field-border);
   border-radius: 12px;
@@ -119,16 +121,40 @@
 .modelRowText {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .modelName {
   font-size: 12.5px;
   font-weight: 600;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .modelBlurb {
   font-size: 10.5px;
   color: var(--text-5);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+
+/* Bottom-bar layout on small screens. */
+@media (max-width: 720px) {
+  .rail {
+    width: 100%;
+    height: 58px;
+    flex-direction: row;
+    border-right: none;
+    border-top: 1px solid var(--rail-border);
+    padding: 0 14px;
+    gap: 10px;
+  }
+
+  .logo {
+    display: none;
+  }
+
+  .modelDropdown {
+    left: auto;
+    right: 0;
+    bottom: 52px;
+  }
 }

@@ -111,3 +111,9 @@
   opacity: .5;
   cursor: default;
 }
+
+@media (max-width: 720px) {
+  .wrap {
+    padding: 0 12px 12px;
+  }
+}

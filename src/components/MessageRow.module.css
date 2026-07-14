@@ -140,3 +140,15 @@
   color: var(--text-6);
   line-height: 1.45;
 }
+
+/* Single column on small screens: margin annotations flow under the message. */
+@media (max-width: 720px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .body {
+    margin-left: 0;
+  }
+}

@@ -33,7 +33,8 @@ export interface PartySlice {
 
   setPartyUserName: (name: string) => void;
   setPartyScenario: (patch: Partial<PartyScenario>) => void;
-  addPartyCharacter: () => void;
+  /** Appends a blank character, or a filled-in one when a preset is passed. */
+  addPartyCharacter: (preset?: { name: string; persona: string }) => void;
   updatePartyCharacter: (id: string, patch: Partial<PartyCharacter>) => void;
   removePartyCharacter: (id: string) => void;
   togglePartyCharacterTool: (id: string, tool: PartyToolKey) => void;
@@ -106,12 +107,12 @@ export const createPartySlice: SliceCreator<PartySlice> = (set, get) => ({
   setPartyScenario: (patch) =>
     set((s) => ({ partyDraft: { ...s.partyDraft, scenario: { ...s.partyDraft.scenario, ...patch } } })),
 
-  addPartyCharacter: () =>
+  addPartyCharacter: (preset) =>
     set((s) => {
       const character: PartyCharacter = {
         id: makeId('pc'),
-        name: '',
-        persona: '',
+        name: preset?.name ?? '',
+        persona: preset?.persona ?? '',
         color: CHARACTER_COLORS[s.partyDraft.characters.length % CHARACTER_COLORS.length],
         allowedTools: [],
       };

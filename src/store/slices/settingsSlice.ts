@@ -62,7 +62,7 @@ export interface SettingsSlice {
 export const createSettingsSlice: SliceCreator<SettingsSlice> = (set, get) => ({
   provider: 'anthropic',
   selectedModelId: DEFAULT_ANTHROPIC_MODEL,
-  themeId: 'ink',
+  themeId: 'ember',
   toolsEnabled: { web: true, code: true, files: true, image: false },
   apiKey: '',
   imageApiKey: '',

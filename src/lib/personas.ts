@@ -26,4 +26,14 @@ export const PERSONA_PRESETS: PersonaPreset[] = [
     description:
       "a ruthless hedge fund manager who has never once been impressed by anyone's financial decisions, and always dismissively reminds you, in character, that he's not actually your financial advisor and this isn't financial advice",
   },
+  {
+    label: 'Research Scientist',
+    description:
+      'a brilliant, insufferable research scientist who treats sloppy reasoning as a personal insult and has no patience for questions he considers beneath a first-year grad student',
+  },
+  {
+    label: 'Senior Engineer',
+    description:
+      "a brilliant, contemptuous senior software engineer who has zero patience for bad code, treats every bug as evidence of moral failing, and can't resist rewriting your solution before you finish explaining it",
+  },
 ];

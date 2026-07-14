@@ -12,6 +12,13 @@
   opacity: 1;
 }
 
+/* Touch screens have no hover — keep the controls reachable. */
+@media (hover: none) {
+  .actions {
+    opacity: 1;
+  }
+}
+
 .btn {
   display: flex;
   align-items: center;

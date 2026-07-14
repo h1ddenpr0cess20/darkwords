@@ -69,9 +69,17 @@ export function MessageRow({ message }: { message: ChatMessage }) {
             message.parts.map((part, i) =>
               part.type === 'code' ? (
                 <CodeBlock key={i} code={part.text} />
+              ) : part.type === 'list' ? (
+                <ul key={i} className={styles.list}>
+                  {part.items.map((item, j) => (
+                    <li key={j} className={styles.para}>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               ) : (
                 <p key={i} className={styles.para}>
-                  {part.type === 'list' ? part.items.join('\n') : part.text}
+                  {part.text}
                 </p>
               ),
             )

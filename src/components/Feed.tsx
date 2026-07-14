@@ -7,6 +7,7 @@ import styles from './Feed.module.css';
 const PIN_THRESHOLD_PX = 80;
 
 export function Feed() {
+  const activeConvoId = useAppStore((s) => s.activeConvoId);
   const convo = useAppStore((s) => s.conversations[s.activeConvoId]);
   const messages = convo?.messages ?? [];
   const ref = useRef<HTMLDivElement>(null);
@@ -18,6 +19,13 @@ export function Feed() {
     if (!el) return;
     pinnedToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < PIN_THRESHOLD_PX;
   };
+
+  /** Switching conversations always lands at the bottom, regardless of where the previous one had scrolled to. */
+  useEffect(() => {
+    pinnedToBottom.current = true;
+    const el = ref.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [activeConvoId]);
 
   /**
    * Keyed on `updatedAt`, not the `messages` array — view-only changes like

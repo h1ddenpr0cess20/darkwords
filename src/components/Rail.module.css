@@ -38,6 +38,11 @@
   flex: 1;
 }
 
+/* Extra gap before the model button in the vertical rail only. */
+.settingsBtn {
+  margin-bottom: 8px;
+}
+
 .modelWrap {
   position: relative;
 }
@@ -149,6 +154,10 @@
 
   .logo {
     display: none;
+  }
+
+  .settingsBtn {
+    margin-bottom: 0;
   }
 
   .modelDropdown {

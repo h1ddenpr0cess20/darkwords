@@ -2,6 +2,8 @@
   font-size: 14.5px;
   line-height: 1.72;
   color: var(--text-1);
+  /* Long URLs and unbroken tokens must wrap instead of widening the feed. */
+  overflow-wrap: break-word;
 }
 
 .md > :first-child { margin-top: 0; }

@@ -212,7 +212,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
             attachments: [],
             rawText: '',
             parts: [
-              { type: 'para', text: 'No Anthropic API key set. Add one in Settings → API Key to start chatting.' },
+              { type: 'para', text: 'No Anthropic API key set. Add one in Settings → Keys to start chatting.' },
             ],
             error: 'missing_api_key',
           }),

@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { resolveModel } from '../lib/models';
 import { useAccent } from '../lib/theme';
@@ -58,6 +58,24 @@ export function Rail() {
   const selectedModel = resolveModel(provider, selectedModelId, models);
   const cssVars = { '--accent': accent, '--accent-bg': accentBg } as CSSProperties;
 
+  const modelWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!modelPickerOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!modelWrapRef.current?.contains(e.target as Node)) toggleModelPicker();
+    };
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') toggleModelPicker();
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [modelPickerOpen, toggleModelPicker]);
+
   return (
     <div className={styles.rail} style={cssVars}>
       <svg width="34" height="34" viewBox="0 0 40 40" fill="none" className={styles.logo}>
@@ -82,11 +100,11 @@ export function Rail() {
 
       <div className={styles.spacer} />
 
-      <button onClick={openSettings} title="Settings" className={`${styles.iconBtn} ${activePanel === 'settings' ? styles.active : ''}`} style={{ marginBottom: 8 }}>
+      <button onClick={openSettings} title="Settings" className={`${styles.iconBtn} ${styles.settingsBtn} ${activePanel === 'settings' ? styles.active : ''}`}>
         <SettingsIcon />
       </button>
 
-      <div className={styles.modelWrap}>
+      <div className={styles.modelWrap} ref={modelWrapRef}>
         <button onClick={toggleModelPicker} title={selectedModel.name} className={styles.modelBtn}>
           {selectedModel.short}
         </button>

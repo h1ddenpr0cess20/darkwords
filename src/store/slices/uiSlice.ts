@@ -42,9 +42,9 @@ export const createUiSlice: SliceCreator<UiSlice> = (set) => ({
   addUpload: (att) => set((s) => ({ pendingUploads: [...s.pendingUploads, att] })),
   removeUpload: (id) => set((s) => ({ pendingUploads: s.pendingUploads.filter((u) => u.id !== id) })),
 
-  openSettings: () => set({ activePanel: 'settings', panelTab: 'model' }),
-  openHistory: () => set({ activePanel: 'history' }),
-  openGallery: () => set({ activePanel: 'gallery' }),
+  openSettings: () => set({ activePanel: 'settings', panelTab: 'model', modelPickerOpen: false }),
+  openHistory: () => set({ activePanel: 'history', modelPickerOpen: false }),
+  openGallery: () => set({ activePanel: 'gallery', modelPickerOpen: false }),
   openLightbox: (image) => set({ lightbox: image }),
   closeLightbox: () => set({ lightbox: null }),
   closePanel: () => set({ activePanel: null, modelPickerOpen: false }),

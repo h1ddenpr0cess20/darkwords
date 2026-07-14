@@ -21,6 +21,7 @@ export function PersonalityTab() {
   const verbose = useAppStore((s) => s.verbose);
   const toggleVerbose = useAppStore((s) => s.toggleVerbose);
   const resetPersonality = useAppStore((s) => s.resetPersonality);
+  const newConversation = useAppStore((s) => s.newConversation);
 
   return (
     <>
@@ -55,12 +56,15 @@ export function PersonalityTab() {
             “Assume the personality of [this]. Roleplay and never break character.”
           </p>
 
+          {/* Picking a persona starts a new chat — continuing an existing one under a different voice would leave earlier replies in the wrong character. */}
           <label className={styles.fieldLabel}>Alternates</label>
           <select
             className={styles.select}
             value=""
             onChange={(e) => {
-              if (e.target.value) setPersonalityName(e.target.value);
+              if (!e.target.value) return;
+              setPersonalityName(e.target.value);
+              newConversation();
             }}
           >
             <option value="">Choose a persona…</option>
@@ -82,7 +86,13 @@ export function PersonalityTab() {
           </div>
 
           <div className={styles.partyActions}>
-            <button className={styles.secondaryBtn} onClick={resetPersonality}>
+            <button
+              className={styles.secondaryBtn}
+              onClick={() => {
+                resetPersonality();
+                newConversation();
+              }}
+            >
               Reset to default
             </button>
           </div>

@@ -114,15 +114,19 @@
   font-size: 11px;
   color: var(--text-6);
   font-family: var(--font-mono);
+  /* Tool inputs are often unbroken JSON; wrap anywhere or they overflow the 240px margin column. */
+  overflow-wrap: anywhere;
 }
 
 .toolOutput {
   font-size: 11.5px;
   color: var(--text-3);
+  overflow-wrap: anywhere;
 }
 
 .toolError {
   font-size: 11.5px;
   color: #E88484;
+  overflow-wrap: anywhere;
 }
 

@@ -1,4 +1,4 @@
-import { useRef, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { useAccent } from '../lib/theme';
 import { makeId } from '../lib/id';
@@ -29,16 +29,17 @@ export function InputBar() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const autosize = () => {
+  // Runs on every input change, including when sending clears the draft, so
+  // the textarea also shrinks back after the send button empties it.
+  useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
-  };
+  }, [input]);
 
   const onChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    autosize();
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -46,7 +47,6 @@ export function InputBar() {
       e.preventDefault();
       if (isSending) return;
       void sendMessage();
-      requestAnimationFrame(autosize);
     }
   };
 

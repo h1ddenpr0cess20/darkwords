@@ -80,6 +80,7 @@
   line-height: 1.65;
   color: var(--text-1);
   white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
 .list {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import handler from './[...path]';
+import handler from '../api/anthropic/[...path]';
 
 function createResponse() {
   const result: { status?: number; headers: Record<string, string>; body?: string | Uint8Array } = { headers: {} };

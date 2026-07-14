@@ -7,6 +7,8 @@ calls as margin annotations, a floating input bar, and a left-hand drawer for
 Settings, History and a media Gallery. On small screens the rail becomes a
 bottom bar and the drawer a full-width sheet.
 
+The UI was created with Claude Design and polished with Claude Code.
+
 ## Stack
 
 - React 19 + TypeScript, built with Vite

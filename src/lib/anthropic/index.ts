@@ -140,6 +140,13 @@ async function fetchGeneratedFile(client: Anthropic, fileId: string): Promise<At
 /**
  * Runs one batch of client-side tool calls and reports each through the
  * callbacks. Returns the tool_result blocks, or null if the turn was aborted.
+ *
+ * A tool call already in flight when Stop is hit is still awaited to
+ * completion rather than discarded — some (like image generation) have
+ * already spent real money by the time they're called, so throwing the
+ * result away on abort would waste it. The result is still recorded and
+ * delivered through the callbacks; only the loop itself stops afterward, so
+ * a stopped turn doesn't go on to make another round-trip to the model.
  */
 async function runClientTools(
   calls: Anthropic.Beta.BetaToolUseBlock[],
@@ -177,6 +184,8 @@ async function runClientTools(
       ...(isError ? { is_error: true } : {}),
       content: [{ type: 'text', text: output }],
     });
+
+    if (signal?.aborted) return null;
   }
 
   return results;

@@ -44,8 +44,36 @@ function run<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequ
   );
 }
 
+/**
+ * Writes are debounced: the persist middleware serializes the whole store on
+ * every setState, which during streaming means one multi-megabyte JSON string
+ * per token delta. Only the latest value per key is kept and written after a
+ * quiet period (or when the page is hidden), so streaming costs one IndexedDB
+ * write instead of hundreds.
+ */
+const WRITE_DEBOUNCE_MS = 500;
+
+const pendingWrites = new Map<string, { value: string; timer: ReturnType<typeof setTimeout> }>();
+
+function flushWrite(name: string): Promise<void> {
+  const pending = pendingWrites.get(name);
+  if (!pending) return Promise.resolve();
+  pendingWrites.delete(name);
+  clearTimeout(pending.timer);
+  return run('readwrite', (store) => store.put(pending.value, name)).then(() => undefined);
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      for (const name of pendingWrites.keys()) void flushWrite(name);
+    }
+  });
+}
+
 export const idbStorage: StateStorage = {
   async getItem(name) {
+    await flushWrite(name);
     const stored = await run<string | undefined>('readonly', (store) => store.get(name));
     if (stored !== undefined) return stored;
 
@@ -61,11 +89,22 @@ export const idbStorage: StateStorage = {
     return null;
   },
 
-  async setItem(name, value) {
-    await run('readwrite', (store) => store.put(value, name));
+  setItem(name, value) {
+    const pending = pendingWrites.get(name);
+    if (pending) clearTimeout(pending.timer);
+    pendingWrites.set(name, {
+      value,
+      timer: setTimeout(() => void flushWrite(name), WRITE_DEBOUNCE_MS),
+    });
+    return Promise.resolve();
   },
 
   async removeItem(name) {
+    const pending = pendingWrites.get(name);
+    if (pending) {
+      clearTimeout(pending.timer);
+      pendingWrites.delete(name);
+    }
     await run('readwrite', (store) => store.delete(name));
   },
 };

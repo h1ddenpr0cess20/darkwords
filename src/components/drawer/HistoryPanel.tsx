@@ -19,7 +19,7 @@ export function HistoryPanel() {
 
   return (
     <div className={styles.list}>
-      <button className={styles.newBtn} onClick={newConversation}>
+      <button className={styles.newBtn} onClick={() => newConversation()}>
         + New conversation
       </button>
       {order.map((id) => {
@@ -28,6 +28,7 @@ export function HistoryPanel() {
         const last = c.messages[c.messages.length - 1];
         const snippet = last ? partsToPlainText(last.parts).slice(0, 80) : 'No messages yet';
         return (
+          // biome-ignore lint/a11y/useSemanticElements: can't be a <button> — it nests the delete button
           <div
             key={id}
             className={`${styles.item} ${id === activeConvoId ? styles.active : ''}`}
@@ -39,12 +40,16 @@ export function HistoryPanel() {
             <span className={styles.itemTitle}>{c.title}</span>
             <span className={styles.itemSnippet}>{snippet}</span>
             <span className={styles.itemTime}>{formatRelativeTime(c.updatedAt)}</span>
-            <button
-              className={styles.deleteBtn}
-              title="Delete conversation"
-              onClick={(e) => onDelete(e, id)}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <button className={styles.deleteBtn} title="Delete conversation" onClick={(e) => onDelete(e, id)}>
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
                 <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H8a2 2 0 01-2-2V6" />
               </svg>
             </button>

@@ -112,6 +112,25 @@ class PartyEngine {
     return this.config;
   }
 
+  /**
+   * Loads a saved config as a stopped party without starting the turn loop —
+   * used to restore resumability after a reload or a conversation switch. A
+   * loop still winding down (stop aborts asynchronously) is told to stop and
+   * then overwritten rather than left in place — otherwise its final publish
+   * would report the *previous* party's config after the conversation switch,
+   * snapshotting it onto the wrong conversation.
+   */
+  hydrate(config: PartyConfig): void {
+    if (this.running) this.stop();
+    this.characters = config.characters;
+    this.scenario = config.scenario;
+    this.userName = config.userName?.trim() || DEFAULT_USER_NAME;
+    this.documents = config.documents ? [...config.documents] : [];
+    this.config = { ...config, userName: this.userName, documents: this.documents };
+    this.history = [];
+    this.publish();
+  }
+
   /** Starts (or restarts) the turn loop for a cast. */
   async start(config: PartyConfig): Promise<void> {
     const host = this.host;
@@ -341,9 +360,7 @@ class PartyEngine {
       image: { displayName: 'Image generation', description: 'create an image from a description' },
       files: { displayName: 'File attachments', description: 'read shared documents' },
     };
-    return speaker.allowedTools
-      .filter((key) => key in known)
-      .map((key) => ({ key, ...known[key] }));
+    return speaker.allowedTools.filter((key) => key in known).map((key) => ({ key, ...known[key] }));
   }
 
   /**
@@ -383,8 +400,7 @@ class PartyEngine {
       const candidate = raw.split('|')[0]?.trim().toLowerCase();
       const match = this.characters.find((c) => c.name.toLowerCase() === candidate);
       if (match) return match;
-    } catch {
-    }
+    } catch {}
 
     return this.pickRandomSpeaker(currentSpeaker.id);
   }

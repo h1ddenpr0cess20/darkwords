@@ -1,4 +1,4 @@
-@import './tokens.css';
+@import "./tokens.css";
 
 * {
   box-sizing: border-box;
@@ -6,7 +6,9 @@
   scrollbar-color: var(--field-border) transparent;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
 }
 
@@ -35,7 +37,9 @@ body {
   border-radius: 4px;
 }
 
-button, textarea, input {
+button,
+textarea,
+input {
   font-family: inherit;
 }
 

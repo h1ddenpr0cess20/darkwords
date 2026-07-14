@@ -23,9 +23,9 @@
   --text-8: #54564d;
   --text-9: #3a3b34;
 
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-serif: 'Newsreader', serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-serif: "Newsreader", serif;
+  --font-mono: "JetBrains Mono", monospace;
 
   --accent-ink: #7ee787;
   --accent-ember: #e8b54d;

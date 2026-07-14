@@ -6,11 +6,20 @@ import { CodeBlock } from './CodeBlock';
 import { Markdown } from './Markdown';
 import { MessageActions } from './MessageActions';
 import { MarginAnnotations } from './MarginAnnotations';
+import { DownloadIcon } from './icons';
 import styles from './MessageRow.module.css';
 
 function FileIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" style={{ flex: 'none' }}>
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="var(--text-4)"
+      strokeWidth="2"
+      style={{ flex: 'none' }}
+    >
       <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
       <path d="M14 2v6h6" />
     </svg>
@@ -21,6 +30,14 @@ export function MessageRow({ message }: { message: ChatMessage }) {
   const { accent, accentBg } = useAccent();
   const openLightbox = useAppStore((s) => s.openLightbox);
   const isUser = message.role === 'user';
+  /**
+   * A generate_image call recorded but not yet resolved. Gated on `streaming`
+   * too — a call aborted before it ever ran (Stop hit right as it started)
+   * never gets an `onToolResult`, so without this the spinner would be stuck
+   * forever; `streaming` always goes false when the turn ends regardless.
+   */
+  const generatingImage =
+    message.streaming && (message.tools ?? []).some((t) => t.name === 'generate_image' && t.output === undefined);
   const nameColor = message.nameColor ?? (isUser ? 'var(--text-0)' : accent);
   const avatarBg = isUser ? 'var(--row-bg-alt)' : accentBg;
   const avatarColor = isUser ? 'var(--text-2)' : accent;
@@ -59,9 +76,17 @@ export function MessageRow({ message }: { message: ChatMessage }) {
             message.parts.map((part, i) =>
               part.type === 'code' ? (
                 <CodeBlock key={i} code={part.text} />
+              ) : part.type === 'list' ? (
+                <ul key={i} className={styles.list}>
+                  {part.items.map((item, j) => (
+                    <li key={j} className={styles.para}>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               ) : (
                 <p key={i} className={styles.para}>
-                  {part.type === 'list' ? part.items.join('\n') : part.text}
+                  {part.text}
                 </p>
               ),
             )
@@ -91,6 +116,29 @@ export function MessageRow({ message }: { message: ChatMessage }) {
               <figcaption className={styles.caption}>{img.label}</figcaption>
             </figure>
           ))}
+
+          {generatingImage && (
+            <div className={styles.imagePlaceholder}>
+              <span className={styles.streamDots}>
+                <span className={styles.dot} style={{ animationDelay: '0s' }} />
+                <span className={styles.dot} style={{ animationDelay: '.15s' }} />
+                <span className={styles.dot} style={{ animationDelay: '.3s' }} />
+              </span>
+              <span>Generating image…</span>
+            </div>
+          )}
+
+          {(message.generatedFiles ?? []).length > 0 && (
+            <div className={styles.attachments}>
+              {(message.generatedFiles ?? []).map((file) => (
+                <a key={file.id} className={styles.generatedFile} href={file.dataUrl} download={file.name}>
+                  <FileIcon />
+                  <span className={styles.attachmentName}>{file.name}</span>
+                  <DownloadIcon size={11} stroke="var(--text-6)" />
+                </a>
+              ))}
+            </div>
+          )}
 
           {!message.streaming && <MessageActions message={message} />}
         </div>

@@ -19,9 +19,9 @@ interface ZipEntry {
 
 /** Lazy accessor for a single ZIP entry's decompressed contents. */
 export interface ZipFileHandle {
-  async(type: "string"): Promise<string>;
-  async(type: "arraybuffer"): Promise<ArrayBuffer>;
-  async(type: "uint8array"): Promise<Uint8Array>;
+  async(type: 'string'): Promise<string>;
+  async(type: 'arraybuffer'): Promise<ArrayBuffer>;
+  async(type: 'uint8array'): Promise<Uint8Array>;
 }
 
 /** A parsed ZIP archive exposing its entries by name. */
@@ -42,7 +42,7 @@ export function readZip(arrayBuffer: ArrayBuffer): ZipArchive {
   const bytes = new Uint8Array(arrayBuffer);
 
   const eocd = findEOCD(view, bytes.length);
-  if (eocd === null) throw new Error("Invalid ZIP: EOCD not found");
+  if (eocd === null) throw new Error('Invalid ZIP: EOCD not found');
 
   const cdOffset = view.getUint32(eocd + 16, true);
   const entryCount = view.getUint16(eocd + 10, true);
@@ -66,7 +66,7 @@ export function readZip(arrayBuffer: ArrayBuffer): ZipArchive {
 
     offset += 46 + nameLen + extraLen + commentLen;
 
-    if (name.endsWith("/")) continue;
+    if (name.endsWith('/')) continue;
 
     files[name] = { name, method, compSize, uncompSize, localHeaderOffset, buffer: arrayBuffer };
   }
@@ -77,10 +77,10 @@ export function readZip(arrayBuffer: ArrayBuffer): ZipArchive {
       const entry = files[name];
       if (!entry) return null;
       return {
-        async async(type: "string" | "arraybuffer" | "uint8array"): Promise<never> {
+        async async(type: 'string' | 'arraybuffer' | 'uint8array'): Promise<never> {
           const data = await extractEntry(entry);
-          if (type === "string") return new TextDecoder().decode(data) as never;
-          if (type === "arraybuffer") {
+          if (type === 'string') return new TextDecoder().decode(data) as never;
+          if (type === 'arraybuffer') {
             return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as never;
           }
           return data as never;
@@ -120,11 +120,14 @@ async function extractEntry(entry: ZipEntry): Promise<Uint8Array> {
 }
 
 async function inflateRaw(compData: Uint8Array<ArrayBuffer>): Promise<Uint8Array> {
-  const ds = new DecompressionStream("deflate-raw");
+  const ds = new DecompressionStream('deflate-raw');
   const writer = ds.writable.getWriter();
   const reader = ds.readable.getReader();
 
-  const writeDone = writer.write(compData).then(() => writer.close()).catch(() => {});
+  const writeDone = writer
+    .write(compData)
+    .then(() => writer.close())
+    .catch(() => {});
 
   const chunks: Uint8Array[] = [];
   let totalLen = 0;

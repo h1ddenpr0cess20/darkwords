@@ -1,11 +1,21 @@
 import { useState } from 'react';
 import type { ChatMessage } from '../types';
 import { useAppStore } from '../store/useAppStore';
+import { partyOwnsInput } from '../store/slices/partySlice';
 import styles from './MessageActions.module.css';
 
 function CopyIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="9" y="9" width="13" height="13" rx="2" />
       <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
     </svg>
@@ -14,7 +24,16 @@ function CopyIcon() {
 
 function RegenIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M21 2v6h-6" />
       <path d="M3 12a9 9 0 0115-6.7L21 8" />
       <path d="M3 22v-6h6" />
@@ -25,7 +44,16 @@ function RegenIcon() {
 
 function BranchIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="6" cy="4" r="2" />
       <circle cx="6" cy="20" r="2" />
       <circle cx="18" cy="12" r="2" />
@@ -38,15 +66,17 @@ function BranchIcon() {
 /**
  * Per-message controls, revealed on hover. Regenerating keeps the previous
  * answer as a version you can page back to rather than destroying it.
- * Regenerate and branch are hidden during a party — the engine owns its own
- * turn loop, and rewriting a single turn under it would desync the transcript.
+ * Regenerate and branch are hidden while the party owns the conversation —
+ * the engine drives its own turn loop, and rewriting a single turn under it
+ * would desync the transcript. They come back once the party is stopped and
+ * chatting solo, same as sending an ordinary message does.
  */
 export function MessageActions({ message }: { message: ChatMessage }) {
   const regenerate = useAppStore((s) => s.regenerateMessage);
   const branch = useAppStore((s) => s.branchFrom);
   const selectVariant = useAppStore((s) => s.selectVariant);
   const isSending = useAppStore((s) => s.isSending);
-  const inParty = useAppStore((s) => Boolean(s.activeParty));
+  const inParty = useAppStore(partyOwnsInput);
 
   const [copied, setCopied] = useState(false);
 
@@ -55,8 +85,7 @@ export function MessageActions({ message }: { message: ChatMessage }) {
       await navigator.clipboard.writeText(message.rawText);
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
-    } catch {
-    }
+    } catch {}
   };
 
   const isAssistant = message.role === 'assistant';

@@ -39,7 +39,10 @@ export function McpServers() {
       {servers.map((m) => (
         <div key={m.id} className={styles.character}>
           <div className={styles.characterHead}>
-            <span className={styles.characterDot} style={{ background: m.enabled ? 'var(--accent)' : 'var(--text-7)' }} />
+            <span
+              className={styles.characterDot}
+              style={{ background: m.enabled ? 'var(--accent)' : 'var(--text-7)' }}
+            />
             <span className={styles.listTitle}>{m.name}</span>
             <button
               className={`${styles.switch} ${m.enabled ? styles.on : ''}`}
@@ -57,12 +60,7 @@ export function McpServers() {
       ))}
 
       <label className={styles.fieldLabel}>Name</label>
-      <input
-        className={styles.apiInput}
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="linear"
-      />
+      <input className={styles.apiInput} value={name} onChange={(e) => setName(e.target.value)} placeholder="linear" />
 
       <label className={styles.fieldLabel}>URL</label>
       <input

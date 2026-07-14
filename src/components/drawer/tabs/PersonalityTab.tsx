@@ -1,5 +1,6 @@
 import { useAppStore } from '../../../store/useAppStore';
 import { PartyForm } from '../PartyForm';
+import { PERSONA_PRESETS } from '../../../lib/personas';
 import type { PromptMode } from '../../../types';
 import styles from '../SettingsPanel.module.css';
 
@@ -20,6 +21,17 @@ export function PersonalityTab() {
   const verbose = useAppStore((s) => s.verbose);
   const toggleVerbose = useAppStore((s) => s.toggleVerbose);
   const resetPersonality = useAppStore((s) => s.resetPersonality);
+  const newConversation = useAppStore((s) => s.newConversation);
+
+  /**
+   * Picking a preset starts a new chat — continuing an existing one under a
+   * different voice would leave earlier replies in the wrong character.
+   */
+  const pickPersona = (description: string) => {
+    if (!description) return;
+    newConversation({ keepPanel: true });
+    setPersonalityName(description);
+  };
 
   return (
     <>
@@ -41,18 +53,30 @@ export function PersonalityTab() {
       {promptMode === 'personality' && (
         <div className={styles.section}>
           <div className={styles.sectionLabel}>PERSONALITY</div>
-          <input
-            className={styles.apiInput}
+
+          <textarea
+            className={styles.textarea}
+            rows={3}
             value={personalityName}
             onChange={(e) => setPersonalityName(e.target.value)}
             placeholder="e.g. a sarcastic pirate captain"
           />
           <p className={styles.info}>
-            Anything goes: a character, a description, an emoji, an abstract concept. The system prompt becomes
-            “Assume the personality of [this]. Roleplay and never break character.”
+            Anything goes: a character, a description, an emoji, an abstract concept. The system prompt becomes “Assume
+            the personality of [this]. Roleplay and never break character.”
           </p>
 
-          <div className={styles.toolRow}>
+          <label className={styles.fieldLabel}>Alternates</label>
+          <select className={styles.select} value="" onChange={(e) => pickPersona(e.target.value)}>
+            <option value="">Choose a persona…</option>
+            {PERSONA_PRESETS.map((p) => (
+              <option key={p.label} value={p.description}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+
+          <div className={styles.toolRow} style={{ marginTop: 14 }}>
             <span className={styles.toolText}>
               <span className={styles.toolLabel}>Verbose mode</span>
               <span className={styles.toolHint}>Drop the “keep responses short” guideline</span>
@@ -63,7 +87,13 @@ export function PersonalityTab() {
           </div>
 
           <div className={styles.partyActions}>
-            <button className={styles.secondaryBtn} onClick={resetPersonality}>
+            <button
+              className={styles.secondaryBtn}
+              onClick={() => {
+                newConversation({ keepPanel: true });
+                resetPersonality();
+              }}
+            >
               Reset to default
             </button>
           </div>

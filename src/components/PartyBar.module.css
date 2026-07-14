@@ -18,21 +18,26 @@
   background: var(--accent);
 }
 
-.dot[data-status='running'] {
+.dot[data-status="running"] {
   animation: dw-pulse 1.4s ease-in-out infinite;
 }
 
-.dot[data-status='paused'] {
+.dot[data-status="paused"] {
   background: #e8b54d;
 }
 
-.dot[data-status='stopped'] {
+.dot[data-status="stopped"] {
   background: var(--text-7);
 }
 
 @keyframes dw-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .25; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
 }
 
 .status {
@@ -66,10 +71,17 @@
   font-size: 11.5px;
   padding: 4px 10px;
   cursor: pointer;
-  transition: border-color .12s, color .12s;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
 }
 
 .btn:hover {
   border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btnActive {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   color: var(--accent);
 }

@@ -28,7 +28,7 @@
 }
 
 .thinkingChevron {
-  transition: transform .15s;
+  transition: transform 0.15s;
 }
 
 .thinkingChevron.open {
@@ -111,18 +111,31 @@
 }
 
 .toolInput {
+  display: block;
   font-size: 11px;
   color: var(--text-6);
   font-family: var(--font-mono);
+  white-space: pre-wrap;
+  /* Tool inputs are often unbroken JSON; wrap anywhere or they overflow the 240px margin column. */
+  overflow-wrap: anywhere;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.toolOutput,
+.toolError {
+  display: block;
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 220px;
+  overflow-y: auto;
 }
 
 .toolOutput {
-  font-size: 11.5px;
   color: var(--text-3);
 }
 
 .toolError {
-  font-size: 11.5px;
-  color: #E88484;
+  color: #e88484;
 }
-

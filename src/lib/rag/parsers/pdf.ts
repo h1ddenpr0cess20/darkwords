@@ -8,19 +8,13 @@
  * programs are skipped. Scanned/image-only PDFs yield no text.
  */
 
-const NON_TEXT_FILTERS = new Set([
-  "DCTDecode",
-  "JPXDecode",
-  "CCITTFaxDecode",
-  "JBIG2Decode",
-  "LZWDecode",
-]);
+const NON_TEXT_FILTERS = new Set(['DCTDecode', 'JPXDecode', 'CCITTFaxDecode', 'JBIG2Decode', 'LZWDecode']);
 
 function isNonTextStream(dictText: string): boolean {
   if (/\/Subtype\s*\/Image/.test(dictText)) return true;
   if (/\/FontFile\d*\s/.test(dictText)) return true;
   for (const f of NON_TEXT_FILTERS) {
-    if (dictText.includes("/" + f)) return true;
+    if (dictText.includes('/' + f)) return true;
   }
   return false;
 }
@@ -33,31 +27,30 @@ function isNonTextStream(dictText: string): boolean {
  */
 export async function extractPdfText(arrayBuffer: ArrayBuffer): Promise<string> {
   const bytes = new Uint8Array(arrayBuffer);
-  const text = new TextDecoder("latin1").decode(bytes);
+  const text = new TextDecoder('latin1').decode(bytes);
 
   const pages: string[] = [];
   const streamRegex = /stream\r?\n/g;
   let match: RegExpExecArray | null;
 
+  // biome-ignore lint/suspicious/noAssignInExpressions: idiomatic RegExp.exec loop
   while ((match = streamRegex.exec(text)) !== null) {
     const streamStart = match.index + match[0].length;
 
-    const endIdx = text.indexOf("endstream", streamStart);
+    const endIdx = text.indexOf('endstream', streamStart);
     if (endIdx === -1) continue;
 
     const dictText = text.slice(Math.max(0, match.index - 2000), match.index);
     if (isNonTextStream(dictText)) continue;
 
-    const isFlate = dictText.includes("/FlateDecode");
-    const isAscii85 = dictText.includes("/ASCII85Decode") || dictText.includes("/A85");
+    const isFlate = dictText.includes('/FlateDecode');
+    const isAscii85 = dictText.includes('/ASCII85Decode') || dictText.includes('/A85');
     let streamBytes = bytes.slice(streamStart, endIdx);
 
     let decoded: string;
     try {
       if (isAscii85) streamBytes = ascii85Decode(streamBytes);
-      decoded = isFlate
-        ? await decompressFlate(streamBytes)
-        : new TextDecoder("latin1").decode(streamBytes);
+      decoded = isFlate ? await decompressFlate(streamBytes) : new TextDecoder('latin1').decode(streamBytes);
     } catch {
       continue;
     }
@@ -66,7 +59,7 @@ export async function extractPdfText(arrayBuffer: ArrayBuffer): Promise<string> 
     if (extracted.trim()) pages.push(extracted.trim());
   }
 
-  return pages.join("\n");
+  return pages.join('\n');
 }
 
 function ascii85Decode(data: Uint8Array): Uint8Array<ArrayBuffer> {
@@ -75,7 +68,11 @@ function ascii85Decode(data: Uint8Array): Uint8Array<ArrayBuffer> {
   let started = false;
   for (let i = 0; i < data.length; i++) {
     const c = data[i];
-    if (!started && c === 0x3c && data[i + 1] === 0x7e) { i++; started = true; continue; }
+    if (!started && c === 0x3c && data[i + 1] === 0x7e) {
+      i++;
+      started = true;
+      continue;
+    }
     if (c === 0x7e) break;
     if (c <= 0x20) continue;
     if (c === 0x7a && tuple.length === 0) {
@@ -103,7 +100,7 @@ function ascii85Decode(data: Uint8Array): Uint8Array<ArrayBuffer> {
 }
 
 async function decompressFlate(data: Uint8Array<ArrayBuffer>): Promise<string> {
-  for (const format of ["deflate", "deflate-raw"] as const) {
+  for (const format of ['deflate', 'deflate-raw'] as const) {
     const chunks: Uint8Array[] = [];
     let totalLen = 0;
     try {
@@ -111,7 +108,10 @@ async function decompressFlate(data: Uint8Array<ArrayBuffer>): Promise<string> {
       const writer = ds.writable.getWriter();
       const reader = ds.readable.getReader();
 
-      const writeDone = writer.write(data).then(() => writer.close()).catch(() => {});
+      const writeDone = writer
+        .write(data)
+        .then(() => writer.close())
+        .catch(() => {});
 
       for (;;) {
         const { done, value } = await reader.read();
@@ -131,19 +131,19 @@ async function decompressFlate(data: Uint8Array<ArrayBuffer>): Promise<string> {
       result.set(chunk, pos);
       pos += chunk.length;
     }
-    return new TextDecoder("latin1").decode(result);
+    return new TextDecoder('latin1').decode(result);
   }
 
-  return new TextDecoder("latin1").decode(data);
+  return new TextDecoder('latin1').decode(data);
 }
 
 /** Decodes a PDF hex string `<4865...>` to text. */
 function decodePdfHexString(hex: string): string {
-  const clean = hex.replace(/\s+/g, "");
-  let s = "";
+  const clean = hex.replace(/\s+/g, '');
+  let s = '';
   for (let i = 0; i + 1 <= clean.length; i += 2) {
     const byte = parseInt(clean.slice(i, i + 2), 16);
-    if (!isNaN(byte)) s += String.fromCharCode(byte);
+    if (!Number.isNaN(byte)) s += String.fromCharCode(byte);
   }
   return s;
 }
@@ -160,18 +160,21 @@ function parseTJInner(inner: string): TJPart[] {
   let lastKern = 0;
   while (i < inner.length) {
     const ch = inner[i];
-    if (ch === "(") {
+    if (ch === '(') {
       let j = i + 1;
       while (j < inner.length) {
-        if (inner[j] === "\\") { j += 2; continue; }
-        if (inner[j] === ")") break;
+        if (inner[j] === '\\') {
+          j += 2;
+          continue;
+        }
+        if (inner[j] === ')') break;
         j++;
       }
       parts.push({ str: decodePdfString(inner.slice(i + 1, j)), kernBefore: lastKern });
       lastKern = 0;
       i = j + 1;
-    } else if (ch === "<") {
-      const end = inner.indexOf(">", i + 1);
+    } else if (ch === '<') {
+      const end = inner.indexOf('>', i + 1);
       if (end === -1) break;
       parts.push({ str: decodePdfHexString(inner.slice(i + 1, end)), kernBefore: lastKern });
       lastKern = 0;
@@ -191,53 +194,65 @@ function parseTJInner(inner: string): TJPart[] {
 
 function extractTextFromStream(content: string): string {
   const lines: string[] = [];
-  let current = "";
+  let current = '';
 
   const tokenRe =
     /BT|ET|(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s+T[dD]|T\*|\[([^\]]*)\]\s*TJ|(<[^>]*>|\([^)\\]*(?:\\.[^)\\]*)*\))\s*Tj|(<[^>]*>|\([^)\\]*(?:\\.[^)\\]*)*\))\s*'/g;
   let m: RegExpExecArray | null;
 
+  // biome-ignore lint/suspicious/noAssignInExpressions: idiomatic RegExp.exec loop
   while ((m = tokenRe.exec(content)) !== null) {
     const tok = m[0];
 
-    if (tok === "BT" || tok === "ET" || tok === "T*") {
-      if (current.trim()) { lines.push(current.trim()); current = ""; }
+    if (tok === 'BT' || tok === 'ET' || tok === 'T*') {
+      if (current.trim()) {
+        lines.push(current.trim());
+        current = '';
+      }
     } else if (m[1] !== undefined) {
       const y = parseFloat(m[2]);
-      if (Math.abs(y) > 1 && current.trim()) { lines.push(current.trim()); current = ""; }
+      if (Math.abs(y) > 1 && current.trim()) {
+        lines.push(current.trim());
+        current = '';
+      }
     } else if (m[3] !== undefined) {
       for (const { str, kernBefore } of parseTJInner(m[3])) {
-        if (kernBefore < -100) current += " ";
+        if (kernBefore < -100) current += ' ';
         current += str;
       }
     } else if (m[4] !== undefined) {
       const raw = m[4];
-      current += raw[0] === "<"
-        ? decodePdfHexString(raw.slice(1, raw.lastIndexOf(">")))
-        : decodePdfString(raw.slice(1, raw.lastIndexOf(")")));
+      current +=
+        raw[0] === '<'
+          ? decodePdfHexString(raw.slice(1, raw.lastIndexOf('>')))
+          : decodePdfString(raw.slice(1, raw.lastIndexOf(')')));
     } else if (m[5] !== undefined) {
-      if (current.trim()) { lines.push(current.trim()); current = ""; }
+      if (current.trim()) {
+        lines.push(current.trim());
+        current = '';
+      }
       const raw = m[5];
-      current += raw[0] === "<"
-        ? decodePdfHexString(raw.slice(1, raw.lastIndexOf(">")))
-        : decodePdfString(raw.slice(1, raw.lastIndexOf(")")));
+      current +=
+        raw[0] === '<'
+          ? decodePdfHexString(raw.slice(1, raw.lastIndexOf('>')))
+          : decodePdfString(raw.slice(1, raw.lastIndexOf(')')));
     }
   }
   if (current.trim()) lines.push(current.trim());
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /** Resolves PDF literal-string escape sequences. */
 function decodePdfString(s: string): string {
   return s
-    .replace(/\\n/g, "\n")
-    .replace(/\\r/g, "\r")
-    .replace(/\\t/g, "\t")
-    .replace(/\\b/g, "\b")
-    .replace(/\\f/g, "\f")
-    .replace(/\\\(/g, "(")
-    .replace(/\\\)/g, ")")
-    .replace(/\\\\/g, "\\")
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t')
+    .replace(/\\b/g, '\b')
+    .replace(/\\f/g, '\f')
+    .replace(/\\\(/g, '(')
+    .replace(/\\\)/g, ')')
+    .replace(/\\\\/g, '\\')
     .replace(/\\(\d{1,3})/g, (_, oct: string) => String.fromCharCode(parseInt(oct, 8)));
 }

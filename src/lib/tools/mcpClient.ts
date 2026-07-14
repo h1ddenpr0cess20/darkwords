@@ -44,9 +44,7 @@ async function parseRpcResponse(res: Response): Promise<Record<string, unknown> 
       try {
         const msg = JSON.parse(line.slice(5).trim()) as Record<string, unknown>;
         if ('result' in msg || 'error' in msg) return msg;
-      } catch {
-        continue;
-      }
+      } catch {}
     }
     return null;
   }

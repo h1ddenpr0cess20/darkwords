@@ -18,9 +18,9 @@ const MIN_RUN = 12;
 export function extractLegacyOfficeText(arrayBuffer: ArrayBuffer): string {
   const bytes = new Uint8Array(arrayBuffer);
   const len = bytes.length;
-  let text = "";
+  let text = '';
 
-  let run = "";
+  let run = '';
   let i = 0;
   while (i + 1 < len) {
     const lo = bytes[i];
@@ -29,34 +29,34 @@ export function extractLegacyOfficeText(arrayBuffer: ArrayBuffer): string {
       run += String.fromCharCode(lo);
       i += 2;
     } else if (hi === 0x00 && lo === 0x0d) {
-      if (run.length >= MIN_RUN) text += run + "\n";
-      run = "";
+      if (run.length >= MIN_RUN) text += run + '\n';
+      run = '';
       i += 2;
     } else {
-      if (run.length >= MIN_RUN) text += run + "\n";
-      run = "";
+      if (run.length >= MIN_RUN) text += run + '\n';
+      run = '';
       i += 2;
     }
   }
-  if (run.length >= MIN_RUN) text += run + "\n";
+  if (run.length >= MIN_RUN) text += run + '\n';
 
-  const utf16Text = text.replace(/\n{3,}/g, "\n\n").trim();
+  const utf16Text = text.replace(/\n{3,}/g, '\n\n').trim();
   if (utf16Text.length > 100) return utf16Text;
 
-  let ascii = "";
-  let asciiRun = "";
+  let ascii = '';
+  let asciiRun = '';
   for (let j = 0; j < len; j++) {
     const c = bytes[j];
     if (c >= 0x20 && c < 0x7f) {
       asciiRun += String.fromCharCode(c);
     } else {
-      if (asciiRun.length >= 40) ascii += asciiRun + "\n";
-      asciiRun = "";
+      if (asciiRun.length >= 40) ascii += asciiRun + '\n';
+      asciiRun = '';
     }
   }
   if (asciiRun.length >= 40) ascii += asciiRun;
 
-  const asciiText = ascii.replace(/\n{3,}/g, "\n\n").trim();
-  if (!asciiText) throw new Error("No readable text extracted from legacy Office file");
+  const asciiText = ascii.replace(/\n{3,}/g, '\n\n').trim();
+  if (!asciiText) throw new Error('No readable text extracted from legacy Office file');
   return asciiText;
 }

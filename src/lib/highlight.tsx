@@ -38,10 +38,7 @@ export function highlightCode(src: string): ReactNode[] {
     }
     if (best.index > 0) out.push(rest.slice(0, best.index));
     out.push(
-      <span
-        key={key++}
-        style={{ color: best.rule.color, fontStyle: best.rule.italic ? 'italic' : undefined }}
-      >
+      <span key={key++} style={{ color: best.rule.color, fontStyle: best.rule.italic ? 'italic' : undefined }}>
         {best.text}
       </span>,
     );

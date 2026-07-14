@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { Effort, McpServer, ModelDef, ToolsEnabled } from '../../types';
+import type { Attachment, Effort, McpServer, ModelDef, ToolsEnabled } from '../../types';
 import type { ClientTool } from '../tools/types';
+import { blobToDataUrl } from '../dataUrl';
 import { toApiContent, type ApiMessage, type ContentBlockParam } from './content';
 import { buildTools, buildToolInstructions, summarizeServerToolResult } from './toolConfig';
 
@@ -16,6 +17,8 @@ export interface StreamCallbacks {
   onTextDelta?: (delta: string) => void;
   onToolCall?: (info: { id: string; name: string; input: string }) => void;
   onToolResult?: (info: { id: string; output: string; isError?: boolean }) => void;
+  /** A file the code interpreter wrote to its container and handed back to the user. */
+  onFileOutput?: (file: Attachment) => void;
   onError?: (message: string) => void;
 }
 
@@ -108,8 +111,59 @@ export function makeThinkTagDemux(onText: (delta: string) => void, onThinking: (
 }
 
 /**
+ * Downloads a file the code interpreter wrote to its container — Anthropic
+ * hands back a `file_id` rather than the bytes, so a generated CSV, plot, or
+ * processed document needs a follow-up Files API round trip before it can be
+ * shown or saved.
+ */
+async function fetchGeneratedFile(client: Anthropic, fileId: string): Promise<Attachment | null> {
+  try {
+    const [metadata, response] = await Promise.all([
+      client.beta.files.retrieveMetadata(fileId),
+      client.beta.files.download(fileId),
+    ]);
+    const dataUrl = await blobToDataUrl(await response.blob());
+    return { id: fileId, name: metadata.filename, mimeType: metadata.mime_type, size: metadata.size_bytes, dataUrl };
+  } catch (err) {
+    console.warn(`Downloading generated file ${fileId} failed`, err);
+    return null;
+  }
+}
+
+/**
+ * File ids for everything the code interpreter wrote out in one assistant
+ * message. The current tool revision (code_execution_20260521) reports files
+ * as `*_code_execution_output` blocks nested inside its tool-result blocks;
+ * the original 2025-05-22 revision surfaced them as top-level
+ * `container_upload` blocks instead. Both shapes are scanned, deduplicated.
+ */
+function collectGeneratedFileIds(content: Anthropic.Beta.BetaContentBlock[]): string[] {
+  const ids = new Set<string>();
+  for (const block of content) {
+    if (block.type === 'container_upload') {
+      ids.add(block.file_id);
+    } else if (block.type === 'code_execution_tool_result' || block.type === 'bash_code_execution_tool_result') {
+      const result = block.content;
+      if (result && 'content' in result && Array.isArray(result.content)) {
+        for (const output of result.content) {
+          if (output.file_id) ids.add(output.file_id);
+        }
+      }
+    }
+  }
+  return [...ids];
+}
+
+/**
  * Runs one batch of client-side tool calls and reports each through the
  * callbacks. Returns the tool_result blocks, or null if the turn was aborted.
+ *
+ * A tool call already in flight when Stop is hit is still awaited to
+ * completion rather than discarded — some (like image generation) have
+ * already spent real money by the time they're called, so throwing the
+ * result away on abort would waste it. The result is still recorded and
+ * delivered through the callbacks; only the loop itself stops afterward, so
+ * a stopped turn doesn't go on to make another round-trip to the model.
  */
 async function runClientTools(
   calls: Anthropic.Beta.BetaToolUseBlock[],
@@ -147,6 +201,8 @@ async function runClientTools(
       ...(isError ? { is_error: true } : {}),
       content: [{ type: 'text', text: output }],
     });
+
+    if (signal?.aborted) return null;
   }
 
   return results;
@@ -284,6 +340,12 @@ export async function streamAssistantTurn(opts: {
         callbacks.onError?.(err instanceof Error ? err.message : String(err));
       }
       return;
+    }
+
+    const fileIds = collectGeneratedFileIds(finalMessage.content);
+    if (fileIds.length) {
+      const files = await Promise.all(fileIds.map((id) => fetchGeneratedFile(client, id)));
+      for (const file of files) if (file) callbacks.onFileOutput?.(file);
     }
 
     if (finalMessage.stop_reason === 'pause_turn') {

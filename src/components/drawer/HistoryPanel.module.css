@@ -42,15 +42,24 @@
   cursor: pointer;
   color: var(--text-7);
   opacity: 0;
-  transition: opacity .12s, color .12s;
+  transition:
+    opacity 0.12s,
+    color 0.12s;
 }
 
 .item:hover .deleteBtn {
   opacity: 1;
 }
 
+/* Touch screens have no hover — keep the delete control reachable. */
+@media (hover: none) {
+  .deleteBtn {
+    opacity: 1;
+  }
+}
+
 .deleteBtn:hover {
-  color: #E88484;
+  color: #e88484;
 }
 
 .item.active {

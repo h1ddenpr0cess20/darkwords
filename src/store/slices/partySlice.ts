@@ -8,22 +8,33 @@ import {
   type PartyStatus,
   type PartyToolKey,
 } from '../../lib/party/types';
-import { emptyConversation } from '../helpers';
+import { emptyConversation, withConvo } from '../helpers';
+import type { Conversation } from '../../types';
 import type { AppState, SliceCreator } from '../types';
 
 /**
  * Party-mode UI state and controls. `partyDraft` is the form being edited;
  * `partyStatus`/`activeParty` mirror the engine, which pushes them into the
- * store via its host.
+ * store via its host. `partySoloMode` only matters while stopped — see
+ * {@link partyOwnsInput}.
  */
 export interface PartySlice {
   partyDraft: PartyConfig;
   partyStatus: PartyStatus;
   activeParty: PartyConfig | null;
+  /**
+   * While a party is stopped, lets the user carry the conversation on as an
+   * ordinary one-on-one chat instead of every message resuming the party.
+   * Reset to `false` whenever the party leaves the stopped state (see
+   * `setStatus` in partyHost.ts) — solo chatting is a per-visit choice, not a
+   * durable setting.
+   */
+  partySoloMode: boolean;
 
   setPartyUserName: (name: string) => void;
   setPartyScenario: (patch: Partial<PartyScenario>) => void;
-  addPartyCharacter: () => void;
+  /** Appends a blank character, or a filled-in one when a preset is passed. */
+  addPartyCharacter: (preset?: { name: string; persona: string }) => void;
   updatePartyCharacter: (id: string, patch: Partial<PartyCharacter>) => void;
   removePartyCharacter: (id: string) => void;
   togglePartyCharacterTool: (id: string, tool: PartyToolKey) => void;
@@ -37,20 +48,24 @@ export interface PartySlice {
   /** Resumes a paused party, or restarts a stopped one with its previous config. */
   resumeParty: () => void;
   stopParty: () => void;
-  /** Exits party mode entirely, clearing the engine's config. */
+  /** Exits party mode entirely, clearing the engine's config and its saved conversation. */
   leaveParty: () => void;
+  /** Flips solo mode; only takes effect while the party is stopped (see {@link partyOwnsInput}). */
+  togglePartySoloMode: () => void;
 }
 
 /** Label colours handed out to new party characters, in order. */
 const CHARACTER_COLORS = ['#7EE787', '#E8B54D', '#8FB9FF', '#E88484', '#C99BFF', '#5FD9C4'];
 
 /**
- * Tears down a running party and returns the state patch that goes with it.
+ * Stops a running party and returns the state patch that goes with it.
  *
- * The engine writes each line into whatever conversation is active at the moment
- * it writes, so a party only holds together while its own conversation stays
- * open. Anything that changes the active conversation ends the party instead of
- * letting its dialogue spill into an unrelated chat.
+ * The engine writes each line into whatever conversation is active at the
+ * moment it writes, so a party only holds together while its own conversation
+ * stays open. Anything that changes the active conversation stops the party
+ * instead of letting its dialogue spill into an unrelated chat — its cast and
+ * scenario stay saved on that conversation (see `setStatus` in partyHost.ts),
+ * so switching back to it, or reloading the page, can resume it.
  */
 export function endRunningParty(s: AppState): Partial<AppState> {
   if (s.partyStatus === 'off') return {};
@@ -58,21 +73,55 @@ export function endRunningParty(s: AppState): Partial<AppState> {
   return { promptMode: 'personality' };
 }
 
+/**
+ * Restores a conversation's saved party as a stopped, resumable one — used
+ * when that conversation becomes active, whether by switching to it or by
+ * reloading the page. When it never held a party, any party still loaded in
+ * the engine belonged to a previous conversation and is unloaded instead, so
+ * a stopped party's control bar can't follow the user into an unrelated chat
+ * (the previous conversation keeps its own saved `partyConfig`, so nothing is
+ * lost). Must be called only once `activeConvoId` already points at `convo` —
+ * hydrating publishes through `setStatus`, which snapshots the config onto
+ * the active conversation.
+ */
+export function loadPartyForConversation(convo: Conversation | undefined): Partial<AppState> {
+  if (!convo?.partyConfig) {
+    if (partyEngine.activeConfig()) partyEngine.reset();
+    return {};
+  }
+  partyEngine.hydrate(convo.partyConfig);
+  return { promptMode: 'party' };
+}
+
+/**
+ * Whether a message typed right now should be handed to the party engine as
+ * an interjection (true) or sent as an ordinary solo turn (false). A live
+ * party — running or paused — always owns the input, since its loop is
+ * already driving the conversation. A stopped one only owns it while solo
+ * mode is off; flipping that on lets the user carry the same conversation on
+ * normally; the transcript is shared either way, so if the party resumes
+ * later it picks up whatever was said in between as part of its own history.
+ */
+export function partyOwnsInput(s: Pick<AppState, 'activeParty' | 'partyStatus' | 'partySoloMode'>): boolean {
+  return Boolean(s.activeParty) && !(s.partyStatus === 'stopped' && s.partySoloMode);
+}
+
 export const createPartySlice: SliceCreator<PartySlice> = (set, get) => ({
   partyDraft: defaultPartyConfig(),
   partyStatus: 'off',
   activeParty: null,
+  partySoloMode: false,
 
   setPartyUserName: (name) => set((s) => ({ partyDraft: { ...s.partyDraft, userName: name } })),
   setPartyScenario: (patch) =>
     set((s) => ({ partyDraft: { ...s.partyDraft, scenario: { ...s.partyDraft.scenario, ...patch } } })),
 
-  addPartyCharacter: () =>
+  addPartyCharacter: (preset) =>
     set((s) => {
       const character: PartyCharacter = {
         id: makeId('pc'),
-        name: '',
-        persona: '',
+        name: preset?.name ?? '',
+        persona: preset?.persona ?? '',
         color: CHARACTER_COLORS[s.partyDraft.characters.length % CHARACTER_COLORS.length],
         allowedTools: [],
       };
@@ -119,7 +168,10 @@ export const createPartySlice: SliceCreator<PartySlice> = (set, get) => ({
     const scenario = draft.scenario;
     convo.title = scenario.topic.trim()
       ? `Party: ${scenario.topic.trim().slice(0, 48)}`
-      : `Party: ${cast.map((c) => c.name || 'Unnamed').join(', ').slice(0, 48)}`;
+      : `Party: ${cast
+          .map((c) => c.name || 'Unnamed')
+          .join(', ')
+          .slice(0, 48)}`;
 
     set((st) => ({
       conversations: { ...st.conversations, [convo.id]: convo },
@@ -145,8 +197,15 @@ export const createPartySlice: SliceCreator<PartySlice> = (set, get) => ({
     if (config) void partyEngine.start(config);
   },
   stopParty: () => partyEngine.stop(),
+  /**
+   * Unlike stop/pause, leaving is a deliberate abandonment: it also drops the
+   * saved config from the conversation, so it won't come back as a resumable
+   * party on the next visit or reload.
+   */
   leaveParty: () => {
+    const cid = get().activeConvoId;
     partyEngine.reset();
-    set({ promptMode: 'personality' });
+    set((s) => ({ promptMode: 'personality', ...withConvo(s, cid, (c) => ({ ...c, partyConfig: undefined })) }));
   },
+  togglePartySoloMode: () => set((s) => ({ partySoloMode: !s.partySoloMode })),
 });

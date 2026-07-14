@@ -38,6 +38,11 @@
   flex: 1;
 }
 
+/* Extra gap before the model button in the vertical rail only. */
+.settingsBtn {
+  margin-bottom: 8px;
+}
+
 .modelWrap {
   position: relative;
 }
@@ -68,15 +73,21 @@
   background: var(--field-bg);
   border: 1px solid var(--field-border);
   border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   padding: 6px;
   z-index: 60;
-  animation: dw-fade .15s ease;
+  animation: dw-fade 0.15s ease;
 }
 
 @keyframes dw-fade {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .modelDropdownLabel {
@@ -149,6 +160,10 @@
 
   .logo {
     display: none;
+  }
+
+  .settingsBtn {
+    margin-bottom: 0;
   }
 
   .modelDropdown {

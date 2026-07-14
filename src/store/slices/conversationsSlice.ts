@@ -2,8 +2,23 @@ import type { Conversation } from '../../types';
 import { makeId } from '../../lib/id';
 import { clearDocIndex } from '../../lib/rag/retrieval';
 import { emptyConversation, firstConversation, patchMessage, withConvo } from '../helpers';
-import { endRunningParty } from './partySlice';
-import type { SliceCreator } from '../types';
+import { endRunningParty, loadPartyForConversation } from './partySlice';
+import { currentPersonaSnapshot, loadPersonaForConversation } from './settingsSlice';
+import type { AppState, SliceCreator } from '../types';
+
+/**
+ * The state patch that makes `convo`'s own settings take effect as it becomes
+ * the active conversation: its saved party restored as a stopped, resumable
+ * one when it has one (a party outranks a persona snapshot — the party
+ * restore also hydrates the engine), otherwise its own prompt-mode/persona
+ * settings, with any party left over from the previous conversation unloaded.
+ * Apply only after `activeConvoId` already points at `convo`: hydrating the
+ * engine publishes through `setStatus`, which snapshots the party config onto
+ * whatever conversation is active at that moment.
+ */
+export function activateConversation(convo: Conversation | undefined): Partial<AppState> {
+  return { ...loadPersonaForConversation(convo), ...loadPartyForConversation(convo) };
+}
 
 /**
  * Conversation lifecycle. Anything that changes the active conversation also
@@ -15,8 +30,13 @@ export interface ConversationsSlice {
   conversationOrder: string[];
   activeConvoId: string;
 
-  /** Opens a fresh conversation; reuses the current one if it is still empty. */
-  newConversation: () => void;
+  /**
+   * Opens a fresh conversation; reuses the current one if it is still empty.
+   * Closes any open drawer panel unless `keepPanel` is set — callers inside
+   * the Settings drawer (persona picks) must not yank the drawer away
+   * mid-interaction.
+   */
+  newConversation: (opts?: { keepPanel?: boolean }) => void;
   selectConversation: (id: string) => void;
   /** Deletes a conversation and its RAG index, creating a fresh one if none remain. */
   deleteConversation: (id: string) => void;
@@ -33,55 +53,57 @@ export const createConversationsSlice: SliceCreator<ConversationsSlice> = (set, 
   conversationOrder: [firstConversation.id],
   activeConvoId: firstConversation.id,
 
-  newConversation: () => {
+  newConversation: (opts) => {
     const party = endRunningParty(get());
     set((s) => {
+      const activePanel = opts?.keepPanel ? s.activePanel : null;
       const current = s.conversations[s.activeConvoId];
       if (current && current.messages.length === 0) {
-        return { ...party, activePanel: null };
+        return { ...party, activePanel };
       }
-      const c = emptyConversation();
+      /** `party`'s promptMode patch (if any) hasn't landed in `s` yet — it's still queued in this same update. */
+      const c = { ...emptyConversation(), personaSnapshot: currentPersonaSnapshot({ ...s, ...party }) };
       return {
         ...party,
         conversations: { ...s.conversations, [c.id]: c },
         conversationOrder: [c.id, ...s.conversationOrder],
         activeConvoId: c.id,
-        activePanel: null,
+        activePanel,
       };
     });
+    const s = get();
+    set(activateConversation(s.conversations[s.activeConvoId]));
   },
 
   selectConversation: (id) => {
     const party = endRunningParty(get());
     set({ ...party, activeConvoId: id, activePanel: null });
+    set(activateConversation(get().conversations[id]));
   },
 
   deleteConversation: (id) => {
     clearDocIndex(id);
-    const party = get().activeConvoId === id ? endRunningParty(get()) : {};
-    set((s) => {
-      const conversations = { ...s.conversations };
-      delete conversations[id];
-      let order = s.conversationOrder.filter((x) => x !== id);
-      if (order.length === 0) {
-        const c = emptyConversation();
-        conversations[c.id] = c;
-        order = [c.id];
-      }
-      return {
-        ...party,
-        conversations,
-        conversationOrder: order,
-        activeConvoId: s.activeConvoId === id ? order[0] : s.activeConvoId,
-      };
-    });
+    const wasActive = get().activeConvoId === id;
+    const party = wasActive ? endRunningParty(get()) : {};
+
+    const s = get();
+    const conversations = { ...s.conversations };
+    delete conversations[id];
+    let order = s.conversationOrder.filter((x) => x !== id);
+    if (order.length === 0) {
+      const c = emptyConversation();
+      conversations[c.id] = c;
+      order = [c.id];
+    }
+    const activeConvoId = wasActive ? order[0] : s.activeConvoId;
+
+    set({ ...party, conversations, conversationOrder: order, activeConvoId });
+    if (wasActive) set(activateConversation(get().conversations[activeConvoId]));
   },
 
   toggleThinking: (msgId) =>
     set((s) =>
-      withConvo(s, s.activeConvoId, (c) =>
-        patchMessage(c, msgId, (m) => ({ thinkingOpen: !m.thinkingOpen }), false),
-      ),
+      withConvo(s, s.activeConvoId, (c) => patchMessage(c, msgId, (m) => ({ thinkingOpen: !m.thinkingOpen }), false)),
     ),
 
   branchFrom: (msgId) => {
@@ -97,6 +119,7 @@ export const createConversationsSlice: SliceCreator<ConversationsSlice> = (set, 
       messages: source.messages.slice(0, cut + 1).map((m) => ({ ...m, id: makeId('m') })),
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      personaSnapshot: source.personaSnapshot ?? currentPersonaSnapshot(s),
     };
 
     set((st) => ({
@@ -116,7 +139,22 @@ export const createConversationsSlice: SliceCreator<ConversationsSlice> = (set, 
           (m) => {
             const variant = m.variants?.[index];
             if (!variant) return {};
-            return { ...variant, variantIndex: index };
+            /**
+             * Every optional field is written explicitly rather than spread:
+             * the JSON persistence round-trip drops undefined-valued keys
+             * from stored variants, and a bare spread would then leave the
+             * previous variant's thinking/tools/imageGen/generatedFiles
+             * showing under the swapped-in one.
+             */
+            return {
+              rawText: variant.rawText,
+              parts: variant.parts,
+              thinking: variant.thinking,
+              tools: variant.tools,
+              imageGen: variant.imageGen,
+              generatedFiles: variant.generatedFiles,
+              variantIndex: index,
+            };
           },
           false,
         ),

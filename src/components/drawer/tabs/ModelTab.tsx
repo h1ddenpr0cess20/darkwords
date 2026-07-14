@@ -36,9 +36,10 @@ export function ModelTab() {
 
   const models = provider === 'lmstudio' ? lmStudioModels : anthropicModels;
 
+  /** Deliberately keyed on `provider` alone — refetch only on switch, not whenever the list empties. */
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch only on provider switch, see above
   useEffect(() => {
     if (!models.length) void refreshModels();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
 
   return (
@@ -91,9 +92,7 @@ export function ModelTab() {
             </span>
           </button>
         ))}
-        {!models.length && !modelsLoading && !modelsError && (
-          <p className={styles.info}>No models loaded yet.</p>
-        )}
+        {!models.length && !modelsLoading && !modelsError && <p className={styles.info}>No models loaded yet.</p>}
         {provider === 'lmstudio' && modelsError && <span className={styles.warn}>{modelsError}</span>}
         {provider === 'lmstudio' && (
           <div className={styles.partyActions}>
@@ -108,8 +107,7 @@ export function ModelTab() {
         <div className={styles.section}>
           <div className={styles.sectionLabel}>EMBEDDING MODEL</div>
           <p className={styles.info}>
-            Used to index and search attached documents locally. Auto picks a loaded embedding model (nomic
-            preferred).
+            Used to index and search attached documents locally. Auto picks a loaded embedding model (nomic preferred).
           </p>
           <button
             className={`${styles.modelRow} ${!embeddingModelId ? styles.selected : ''}`}

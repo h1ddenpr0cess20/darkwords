@@ -4,8 +4,25 @@ import { parseBlocks } from '../lib/blocks';
 import { completeOnce, streamAssistantTurn } from '../lib/anthropic';
 import { partyEngine, type PartyHost, type TranscriptLine } from '../lib/party/engine';
 import { appendMessage, dropMessage, messageText, nowTime, patchMessage, withConvo } from './helpers';
-import { activeModel, apiTarget, effectiveMcpServers, effectiveTools, gatherClientTools, streamCallbacks } from './chatSupport';
+import {
+  activeModel,
+  apiTarget,
+  effectiveMcpServers,
+  effectiveTools,
+  gatherClientTools,
+  streamCallbacks,
+} from './chatSupport';
 import { useAppStore } from './useAppStore';
+
+/**
+ * The conversation each in-flight speaker bubble was created in. Finalize and
+ * discard resolve through this rather than `activeConvoId` — an aborted turn
+ * unwinds *after* a conversation switch has already moved `activeConvoId`
+ * elsewhere, and patching the wrong conversation would leave the real bubble
+ * stuck with `streaming: true` forever (it's persisted wholesale). Entries are
+ * removed once the bubble is finalized or discarded.
+ */
+const bubbleConvo = new Map<string, string>();
 
 /**
  * Bridges the party engine to the store. Registered once, at module load — the
@@ -15,6 +32,7 @@ const host: PartyHost = {
   createSpeakerMessage(character) {
     const id = makeId('a');
     const cid = useAppStore.getState().activeConvoId;
+    bubbleConvo.set(id, cid);
     useAppStore.setState((s) =>
       withConvo(s, cid, (c) =>
         appendMessage(c, {
@@ -42,7 +60,7 @@ const host: PartyHost = {
    */
   async streamTurn({ messageId, character, systemPrompt, prompt, signal }) {
     const s = useAppStore.getState();
-    const cid = s.activeConvoId;
+    const cid = bubbleConvo.get(messageId) ?? s.activeConvoId;
     const model = activeModel(s);
     const enabled = effectiveTools(s);
 
@@ -73,7 +91,8 @@ const host: PartyHost = {
   },
 
   finalizeMessage(messageId) {
-    const cid = useAppStore.getState().activeConvoId;
+    const cid = bubbleConvo.get(messageId) ?? useAppStore.getState().activeConvoId;
+    bubbleConvo.delete(messageId);
     useAppStore.setState((s) =>
       withConvo(s, cid, (c) =>
         patchMessage(c, messageId, (m) => ({
@@ -85,7 +104,8 @@ const host: PartyHost = {
   },
 
   discardMessage(messageId) {
-    const cid = useAppStore.getState().activeConvoId;
+    const cid = bubbleConvo.get(messageId) ?? useAppStore.getState().activeConvoId;
+    bubbleConvo.delete(messageId);
     useAppStore.setState((s) => withConvo(s, cid, (c) => dropMessage(c, messageId)));
   },
 
@@ -120,8 +140,22 @@ const host: PartyHost = {
     return completeOnce({ ...apiTarget(s), model: activeModel(s), prompt, signal });
   },
 
+  /**
+   * Publishes engine status to the store and, whenever a config is active,
+   * snapshots it onto the conversation it belongs to — that's what lets a
+   * stopped party be resumed after a reload. Leaving party mode passes
+   * `config: null` and is handled separately, by `leaveParty`, so a mere
+   * conversation switch (which also stops the loop) never erases it here.
+   * Solo mode always resets once the party leaves 'stopped' — it's a
+   * per-visit choice, moot once the loop is running again.
+   */
   setStatus(status, config) {
-    useAppStore.setState({ partyStatus: status, activeParty: config });
+    useAppStore.setState((s) => ({
+      partyStatus: status,
+      activeParty: config,
+      ...(status !== 'stopped' ? { partySoloMode: false } : {}),
+      ...(config ? withConvo(s, s.activeConvoId, (c) => ({ ...c, partyConfig: config })) : {}),
+    }));
   },
 
   onError(message) {

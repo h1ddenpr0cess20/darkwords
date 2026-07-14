@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../store/useAppStore';
+import { CloseIcon, DownloadIcon } from './icons';
 import styles from './Lightbox.module.css';
 
 /**
@@ -25,23 +26,28 @@ export function Lightbox() {
   const download = () => {
     const a = document.createElement('a');
     a.href = image.src;
-    a.download = `${image.label.replace(/[^\w\s-]/g, '').trim().slice(0, 60) || 'image'}.png`;
+    a.download = `${
+      image.label
+        .replace(/[^\w\s-]/g, '')
+        .trim()
+        .slice(0, 60) || 'image'
+    }.png`;
     a.click();
   };
 
   return (
     <div className={styles.overlay} onClick={close} role="dialog" aria-modal="true">
       <div className={styles.inner} onClick={(e) => e.stopPropagation()}>
-        <img className={styles.image} src={image.src} alt={image.label} />
         <div className={styles.bar}>
-          <span className={styles.caption}>{image.label}</span>
-          <button className={styles.btn} onClick={download}>
-            Download
+          <button className={styles.btn} onClick={download} title="Download">
+            <DownloadIcon />
           </button>
-          <button className={styles.btn} onClick={close}>
-            Close
+          <button className={styles.btn} onClick={close} title="Close">
+            <CloseIcon />
           </button>
         </div>
+        <img className={styles.image} src={image.src} alt={image.label} />
+        {image.label && <span className={styles.caption}>{image.label}</span>}
       </div>
     </div>
   );

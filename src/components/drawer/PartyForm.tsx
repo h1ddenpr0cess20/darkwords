@@ -1,5 +1,7 @@
 import { useAppStore } from '../../store/useAppStore';
 import { CONVERSATION_TYPES, MOODS, type PartyToolKey } from '../../lib/party/types';
+import { PERSONA_PRESETS } from '../../lib/personas';
+import { DEFAULT_PERSONALITY_NAME } from '../../lib/prompt';
 import styles from './SettingsPanel.module.css';
 
 const CHARACTER_TOOLS: { key: PartyToolKey; label: string }[] = [
@@ -7,6 +9,9 @@ const CHARACTER_TOOLS: { key: PartyToolKey; label: string }[] = [
   { key: 'code', label: 'code' },
   { key: 'image', label: 'image' },
 ];
+
+/** Quick-add characters offered above the cast list: the app's default persona plus the same presets from Settings → Personality. */
+const CHARACTER_PRESETS = [{ label: 'Villain (default)', description: DEFAULT_PERSONALITY_NAME }, ...PERSONA_PRESETS];
 
 /**
  * Party setup: the scenario the cast converses within, and the cast itself.
@@ -97,6 +102,22 @@ export function PartyForm() {
       </div>
       <p className={styles.info}>Add at least two characters. Each can be granted its own tools.</p>
 
+      <select
+        className={styles.select}
+        value=""
+        onChange={(e) => {
+          const preset = CHARACTER_PRESETS.find((p) => p.label === e.target.value);
+          if (preset) addPartyCharacter({ name: preset.label, persona: preset.description });
+        }}
+      >
+        <option value="">Add an example character…</option>
+        {CHARACTER_PRESETS.map((p) => (
+          <option key={p.label} value={p.label}>
+            {p.label}
+          </option>
+        ))}
+      </select>
+
       {draft.characters.map((c) => (
         <div key={c.id} className={styles.character}>
           <div className={styles.characterHead}>
@@ -117,7 +138,7 @@ export function PartyForm() {
           </div>
           <textarea
             className={styles.characterPersona}
-            rows={2}
+            rows={4}
             value={c.persona}
             onChange={(e) => updatePartyCharacter(c.id, { persona: e.target.value })}
             placeholder="Persona — e.g. a cynical ex-detective who trusts no one"
@@ -137,7 +158,7 @@ export function PartyForm() {
       ))}
 
       <div className={styles.partyActions}>
-        <button className={styles.secondaryBtn} onClick={addPartyCharacter}>
+        <button className={styles.secondaryBtn} onClick={() => addPartyCharacter()}>
           Add character
         </button>
         <button

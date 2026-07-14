@@ -1,18 +1,31 @@
-import { useRef, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { useAccent } from '../lib/theme';
 import { makeId } from '../lib/id';
+import { blobToDataUrl } from '../lib/dataUrl';
 import { PartyBar } from './PartyBar';
 import styles from './InputBar.module.css';
 
+/**
+ * Caps how tall the textarea grows before it scrolls internally instead —
+ * must stay in sync with `.textarea`'s max-height in InputBar.module.css.
+ * The floating input bar overlaps the feed above a certain height (the feed
+ * only reserves so much bottom padding for it), so this has to leave room
+ * for the bar's own padding/border and the wrap's bottom padding on top.
+ */
+const TEXTAREA_MAX_HEIGHT = 88;
+
 /** Reads a picked file into an Attachment, inlining its bytes as a data URL. */
-function readFileAsAttachment(file: File): Promise<{ id: string; name: string; mimeType: string; size: number; dataUrl: string }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve({ id: makeId('att'), name: file.name, mimeType: file.type || 'application/octet-stream', size: file.size, dataUrl: String(reader.result) });
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
+async function readFileAsAttachment(
+  file: File,
+): Promise<{ id: string; name: string; mimeType: string; size: number; dataUrl: string }> {
+  return {
+    id: makeId('att'),
+    name: file.name,
+    mimeType: file.type || 'application/octet-stream',
+    size: file.size,
+    dataUrl: await blobToDataUrl(file),
+  };
 }
 
 export function InputBar() {
@@ -29,16 +42,20 @@ export function InputBar() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const autosize = () => {
+  /**
+   * Runs on every input change, including when sending clears the draft, so
+   * the textarea also shrinks back after the send button empties it.
+   */
+  // biome-ignore lint/correctness/useExhaustiveDependencies: resize on every draft change
+  useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
-  };
+    el.style.height = `${Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT)}px`;
+  }, [input]);
 
   const onChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    autosize();
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -46,7 +63,6 @@ export function InputBar() {
       e.preventDefault();
       if (isSending) return;
       void sendMessage();
-      requestAnimationFrame(autosize);
     }
   };
 
@@ -78,7 +94,16 @@ export function InputBar() {
         <div className={styles.bar}>
           <input ref={fileInputRef} type="file" multiple hidden onChange={onFilesSelected} />
           <button className={styles.attachBtn} title="Attach file" onClick={() => fileInputRef.current?.click()}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
             </svg>
           </button>
@@ -105,7 +130,16 @@ export function InputBar() {
               onClick={() => void sendMessage()}
               style={{ background: accent }}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M22 2L11 13" />
                 <path d="M22 2l-7 20-4-9-9-4z" />
               </svg>

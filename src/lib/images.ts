@@ -41,6 +41,16 @@ export async function generateImage(opts: {
     );
   }
 
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+
+  /**
+   * Deliberately not passing `signal` to fetch: once the request is sent,
+   * OpenAI generates (and bills for) the image whether or not we're still
+   * listening for the response. Hitting Stop mid-generation used to abort
+   * this fetch and throw the result away — paid for, never shown. Letting it
+   * run to completion means the image still lands in the feed and Gallery
+   * even if the surrounding turn was stopped.
+   */
   let res: Response;
   try {
     res = await fetch(OPENAI_IMAGES_URL, {
@@ -50,10 +60,8 @@ export async function generateImage(opts: {
         authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({ model: IMAGE_MODEL, prompt, n: 1, size }),
-      signal,
     });
   } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') throw err;
     throw new ImageGenError(`Could not reach the image API: ${err instanceof Error ? err.message : String(err)}`);
   }
 

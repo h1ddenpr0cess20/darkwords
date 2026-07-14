@@ -3,6 +3,8 @@ import { makeId } from '../../lib/id';
 import { parseBlocks } from '../../lib/blocks';
 import { streamAssistantTurn, type ApiMessage } from '../../lib/anthropic';
 import { partyEngine } from '../../lib/party/engine';
+import { attachmentsToDocuments } from '../../lib/rag/retrieval';
+import { partyOwnsInput } from './partySlice';
 import type { MessageVariant } from '../../types';
 import { appendMessage, messageText, nowTime, patchMessage, withConvo } from '../helpers';
 import {
@@ -49,7 +51,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
   isSending: false,
 
   stopStreaming: () => {
-    if (get().activeParty) {
+    if (partyOwnsInput(get())) {
       partyEngine.stop();
       return;
     }
@@ -59,13 +61,13 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
 
   regenerateMessage: async (msgId) => {
     const s = get();
-    if (s.isSending || s.activeParty) return;
+    if (s.isSending || partyOwnsInput(s)) return;
 
     const cid = s.activeConvoId;
     const convo = s.conversations[cid];
     const index = convo?.messages.findIndex((m) => m.id === msgId) ?? -1;
     const target = index >= 0 ? convo.messages[index] : undefined;
-    if (!target || target.role !== 'assistant') return;
+    if (target?.role !== 'assistant') return;
 
     const model = activeModel(s);
     if (s.provider === 'anthropic' && !s.apiKey) return;
@@ -76,6 +78,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
       thinking: target.thinking,
       tools: target.tools,
       imageGen: target.imageGen,
+      generatedFiles: target.generatedFiles,
     };
 
     set((st) =>
@@ -87,6 +90,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
           thinking: undefined,
           tools: undefined,
           imageGen: undefined,
+          generatedFiles: undefined,
           error: undefined,
           streaming: true,
         })),
@@ -105,10 +109,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
     try {
       const s0 = get();
       const lastUser = [...history].reverse().find((m) => m.role === 'user');
-      appendContextToHistory(
-        history,
-        await prepareLocalDocContext(s0, cid, lastUser?.text ?? '', controller.signal),
-      );
+      appendContextToHistory(history, await prepareLocalDocContext(s0, cid, lastUser?.text ?? '', controller.signal));
       await streamAssistantTurn({
         ...apiTarget(s0),
         model,
@@ -139,6 +140,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
               thinking: m.thinking,
               tools: m.tools,
               imageGen: m.imageGen,
+              generatedFiles: m.generatedFiles,
             };
             const variants = [...(m.variants ?? []), fresh];
             return { streaming: false, parts, variants, variantIndex: variants.length - 1 };
@@ -153,8 +155,19 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
     const text = state.input.trim();
     if ((!text && state.pendingUploads.length === 0) || state.isSending) return;
 
-    if (state.activeParty) {
-      set({ input: '' });
+    /**
+     * The party engine owns the input: text becomes an interjection, and any
+     * uploads become documents the whole cast can see — they must not be left
+     * in the tray, or they'd silently ride along under the next solo message.
+     */
+    if (partyOwnsInput(state)) {
+      const uploads = state.pendingUploads;
+      set({ input: '', pendingUploads: [] });
+      if (uploads.length) {
+        void attachmentsToDocuments(uploads).then((docs) => {
+          if (docs.length) partyEngine.addDocuments(docs);
+        });
+      }
       partyEngine.queueInterjection(text);
       return;
     }
@@ -207,9 +220,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
             time: nowTime(),
             attachments: [],
             rawText: '',
-            parts: [
-              { type: 'para', text: 'No Anthropic API key set. Add one in Settings → API Key to start chatting.' },
-            ],
+            parts: [{ type: 'para', text: 'No Anthropic API key set. Add one in Settings → Keys to start chatting.' }],
             error: 'missing_api_key',
           }),
         ),
@@ -268,9 +279,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
         });
       } catch (err) {
         const text = err instanceof Error ? err.message : String(err);
-        set((s) =>
-          withConvo(s, cid, (c) => patchMessage(c, assistantId, (m) => ({ error: m.error ?? text }))),
-        );
+        set((s) => withConvo(s, cid, (c) => patchMessage(c, assistantId, (m) => ({ error: m.error ?? text }))));
       } finally {
         set((s) =>
           withConvo(s, cid, (c) =>

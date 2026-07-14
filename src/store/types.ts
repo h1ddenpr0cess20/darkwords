@@ -7,13 +7,7 @@ import type { PartySlice } from './slices/partySlice';
 import type { ConversationsSlice } from './slices/conversationsSlice';
 import type { ChatSlice } from './slices/chatSlice';
 
-export type AppState = UiSlice &
-  SettingsSlice &
-  LibrarySlice &
-  DataSlice &
-  PartySlice &
-  ConversationsSlice &
-  ChatSlice;
+export type AppState = UiSlice & SettingsSlice & LibrarySlice & DataSlice & PartySlice & ConversationsSlice & ChatSlice;
 
 /** Every slice is written against the whole store, so cross-slice reads stay typed. */
 export type SliceCreator<T> = StateCreator<AppState, [['zustand/persist', unknown]], [], T>;

@@ -11,7 +11,8 @@ export function TopStrip() {
   return (
     <div className={styles.strip}>
       <h1 className={styles.title}>{conversation.title}</h1>
-      <span className={styles.turns}>{conversation.messages.length} turns</span>
+      {/* A turn is one user→assistant exchange, so count the user messages. */}
+      <span className={styles.turns}>{conversation.messages.filter((m) => m.role === 'user').length} turns</span>
       <div className={styles.spacer} />
 
       {party && (

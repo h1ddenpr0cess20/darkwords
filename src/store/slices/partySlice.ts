@@ -76,10 +76,19 @@ export function endRunningParty(s: AppState): Partial<AppState> {
 /**
  * Restores a conversation's saved party as a stopped, resumable one — used
  * when that conversation becomes active, whether by switching to it or by
- * reloading the page. A no-op when it never held a party.
+ * reloading the page. When it never held a party, any party still loaded in
+ * the engine belonged to a previous conversation and is unloaded instead, so
+ * a stopped party's control bar can't follow the user into an unrelated chat
+ * (the previous conversation keeps its own saved `partyConfig`, so nothing is
+ * lost). Must be called only once `activeConvoId` already points at `convo` —
+ * hydrating publishes through `setStatus`, which snapshots the config onto
+ * the active conversation.
  */
 export function loadPartyForConversation(convo: Conversation | undefined): Partial<AppState> {
-  if (!convo?.partyConfig) return {};
+  if (!convo?.partyConfig) {
+    if (partyEngine.activeConfig()) partyEngine.reset();
+    return {};
+  }
   partyEngine.hydrate(convo.partyConfig);
   return { promptMode: 'party' };
 }
@@ -159,7 +168,10 @@ export const createPartySlice: SliceCreator<PartySlice> = (set, get) => ({
     const scenario = draft.scenario;
     convo.title = scenario.topic.trim()
       ? `Party: ${scenario.topic.trim().slice(0, 48)}`
-      : `Party: ${cast.map((c) => c.name || 'Unnamed').join(', ').slice(0, 48)}`;
+      : `Party: ${cast
+          .map((c) => c.name || 'Unnamed')
+          .join(', ')
+          .slice(0, 48)}`;
 
     set((st) => ({
       conversations: { ...st.conversations, [convo.id]: convo },

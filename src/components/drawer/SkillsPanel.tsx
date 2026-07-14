@@ -46,7 +46,10 @@ export function SkillsPanel() {
       {skills.map((sk) => (
         <div key={sk.id} className={styles.character}>
           <div className={styles.characterHead}>
-            <span className={styles.characterDot} style={{ background: sk.enabled ? 'var(--accent)' : 'var(--text-7)' }} />
+            <span
+              className={styles.characterDot}
+              style={{ background: sk.enabled ? 'var(--accent)' : 'var(--text-7)' }}
+            />
             <span className={styles.listTitle}>{sk.name}</span>
             <button
               className={`${styles.switch} ${sk.enabled ? styles.on : ''}`}

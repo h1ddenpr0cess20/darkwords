@@ -6,9 +6,9 @@
  * elements grouped by `<w:p>` paragraphs.
  */
 
-import { readZip } from "./zip.ts";
+import { readZip } from './zip.ts';
 
-const WML_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+const WML_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 
 /**
  * Extracts the body text of a DOCX file, preserving paragraph, tab, and break
@@ -20,29 +20,32 @@ const WML_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 export async function extractDocxText(arrayBuffer: ArrayBuffer): Promise<string> {
   const zip = readZip(arrayBuffer);
 
-  const docFile = zip.file("word/document.xml");
-  if (!docFile) throw new Error("word/document.xml not found in DOCX");
+  const docFile = zip.file('word/document.xml');
+  if (!docFile) throw new Error('word/document.xml not found in DOCX');
 
-  const xml = await docFile.async("string");
-  const dom = new DOMParser().parseFromString(xml, "application/xml");
+  const xml = await docFile.async('string');
+  const dom = new DOMParser().parseFromString(xml, 'application/xml');
 
-  const paragraphs = dom.getElementsByTagNameNS(WML_NS, "p");
+  const paragraphs = dom.getElementsByTagNameNS(WML_NS, 'p');
 
   const lines: string[] = [];
   for (const p of Array.from(paragraphs)) {
-    const runs = p.getElementsByTagNameNS(WML_NS, "r");
+    const runs = p.getElementsByTagNameNS(WML_NS, 'r');
 
-    let paraText = "";
+    let paraText = '';
     for (const r of Array.from(runs)) {
-      if (r.getElementsByTagNameNS(WML_NS, "tab").length) paraText += "\t";
-      if (r.getElementsByTagNameNS(WML_NS, "br").length) paraText += "\n";
-      for (const t of Array.from(r.getElementsByTagNameNS(WML_NS, "t"))) {
-        paraText += t.textContent || "";
+      if (r.getElementsByTagNameNS(WML_NS, 'tab').length) paraText += '\t';
+      if (r.getElementsByTagNameNS(WML_NS, 'br').length) paraText += '\n';
+      for (const t of Array.from(r.getElementsByTagNameNS(WML_NS, 't'))) {
+        paraText += t.textContent || '';
       }
     }
 
     lines.push(paraText);
   }
 
-  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return lines
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }

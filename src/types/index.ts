@@ -112,15 +112,7 @@ export interface Conversation {
   personaSnapshot?: PersonaSnapshot;
 }
 
-export type ThemeId =
-  | 'ink'
-  | 'ember'
-  | 'dusk'
-  | 'slate'
-  | 'violet'
-  | 'crimson'
-  | 'rose'
-  | 'teal';
+export type ThemeId = 'ink' | 'ember' | 'dusk' | 'slate' | 'violet' | 'crimson' | 'rose' | 'teal';
 
 export interface ThemeDef {
   id: ThemeId;

@@ -11,33 +11,112 @@
  * as UTF-8 text, so any code, config, or data file works without an allowlist.
  */
 
-import { extractPdfText } from "./pdf.ts";
-import { extractDocxText } from "./docx.ts";
-import { extractLegacyOfficeText } from "./doc.ts";
-import { extractEpubText } from "./epub.ts";
-import { extractOdfText } from "./odf.ts";
-import { extractRtfText } from "./rtf.ts";
-import { extractMobiText } from "./mobi.ts";
-import { extractPptxText } from "./pptx.ts";
-import { extractXlsxText } from "./xlsx.ts";
-import { readZip } from "./zip.ts";
+import { extractPdfText } from './pdf.ts';
+import { extractDocxText } from './docx.ts';
+import { extractLegacyOfficeText } from './doc.ts';
+import { extractEpubText } from './epub.ts';
+import { extractOdfText } from './odf.ts';
+import { extractRtfText } from './rtf.ts';
+import { extractMobiText } from './mobi.ts';
+import { extractPptxText } from './pptx.ts';
+import { extractXlsxText } from './xlsx.ts';
+import { readZip } from './zip.ts';
 
 const BINARY_DOC_EXTENSIONS = new Set([
-  "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
-  "odt", "ods", "odp", "odg", "rtf", "epub", "mobi", "azw", "azw3", "zip",
+  'pdf',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
+  'odt',
+  'ods',
+  'odp',
+  'odg',
+  'rtf',
+  'epub',
+  'mobi',
+  'azw',
+  'azw3',
+  'zip',
 ]);
 
 const UNSUPPORTED_BINARY_EXTENSIONS = new Set([
-  "png", "jpg", "jpeg", "gif", "webp", "bmp", "tif", "tiff", "ico", "heic", "heif", "avif", "psd", "ai",
-  "mp3", "wav", "flac", "ogg", "oga", "m4a", "aac", "opus", "mp4", "m4v", "mov", "avi", "mkv", "webm", "wmv", "flv",
-  "exe", "dll", "so", "dylib", "bin", "o", "lib", "obj", "class", "jar", "war", "wasm", "node", "pyc", "pyo",
-  "7z", "rar", "gz", "bz2", "xz", "zst", "br", "tar", "tgz", "tbz", "cab", "iso", "dmg", "apk", "deb", "rpm",
-  "ttf", "otf", "woff", "woff2", "eot", "sqlite", "db", "dat",
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'bmp',
+  'tif',
+  'tiff',
+  'ico',
+  'heic',
+  'heif',
+  'avif',
+  'psd',
+  'ai',
+  'mp3',
+  'wav',
+  'flac',
+  'ogg',
+  'oga',
+  'm4a',
+  'aac',
+  'opus',
+  'mp4',
+  'm4v',
+  'mov',
+  'avi',
+  'mkv',
+  'webm',
+  'wmv',
+  'flv',
+  'exe',
+  'dll',
+  'so',
+  'dylib',
+  'bin',
+  'o',
+  'lib',
+  'obj',
+  'class',
+  'jar',
+  'war',
+  'wasm',
+  'node',
+  'pyc',
+  'pyo',
+  '7z',
+  'rar',
+  'gz',
+  'bz2',
+  'xz',
+  'zst',
+  'br',
+  'tar',
+  'tgz',
+  'tbz',
+  'cab',
+  'iso',
+  'dmg',
+  'apk',
+  'deb',
+  'rpm',
+  'ttf',
+  'otf',
+  'woff',
+  'woff2',
+  'eot',
+  'sqlite',
+  'db',
+  'dat',
 ]);
 
 function getExt(name: string): string {
-  const base = name.split("/").pop() || name;
-  const dot = base.lastIndexOf(".");
+  const base = name.split('/').pop() || name;
+  const dot = base.lastIndexOf('.');
   return dot >= 0 ? base.slice(dot + 1).toLowerCase() : base.toLowerCase();
 }
 
@@ -68,44 +147,44 @@ function isZipContainer(buffer: ArrayBuffer): boolean {
 }
 
 function decodeText(buffer: ArrayBuffer, label: string): string {
-  const text = new TextDecoder("utf-8").decode(new Uint8Array(buffer));
+  const text = new TextDecoder('utf-8').decode(new Uint8Array(buffer));
   if (looksBinary(text)) throw new Error(`Cannot extract text from ${label}`);
   return text.trim();
 }
 
 async function extractFromBuffer(ext: string, buffer: ArrayBuffer, name: string): Promise<string> {
   switch (ext) {
-  case "pdf":
-    return extractPdfText(buffer);
-  case "docx":
-    return extractDocxText(buffer);
-  case "xlsx":
-    return extractXlsxText(buffer);
-  case "pptx":
-    return extractPptxText(buffer);
-  case "doc":
-    return isZipContainer(buffer) ? extractDocxText(buffer) : extractLegacyOfficeText(buffer);
-  case "xls":
-    return isZipContainer(buffer) ? extractXlsxText(buffer) : extractLegacyOfficeText(buffer);
-  case "ppt":
-    return isZipContainer(buffer) ? extractPptxText(buffer) : extractLegacyOfficeText(buffer);
-  case "odt":
-  case "ods":
-  case "odp":
-  case "odg":
-    return extractOdfText(buffer);
-  case "rtf":
-    return extractRtfText(new TextDecoder("latin1").decode(new Uint8Array(buffer)));
-  case "epub":
-    return (await extractEpubText(buffer)).text;
-  case "mobi":
-  case "azw":
-  case "azw3":
-    return extractMobiText(buffer);
-  case "zip":
-    return extractZipContainer(buffer);
-  default:
-    return decodeText(buffer, name);
+    case 'pdf':
+      return extractPdfText(buffer);
+    case 'docx':
+      return extractDocxText(buffer);
+    case 'xlsx':
+      return extractXlsxText(buffer);
+    case 'pptx':
+      return extractPptxText(buffer);
+    case 'doc':
+      return isZipContainer(buffer) ? extractDocxText(buffer) : extractLegacyOfficeText(buffer);
+    case 'xls':
+      return isZipContainer(buffer) ? extractXlsxText(buffer) : extractLegacyOfficeText(buffer);
+    case 'ppt':
+      return isZipContainer(buffer) ? extractPptxText(buffer) : extractLegacyOfficeText(buffer);
+    case 'odt':
+    case 'ods':
+    case 'odp':
+    case 'odg':
+      return extractOdfText(buffer);
+    case 'rtf':
+      return extractRtfText(new TextDecoder('latin1').decode(new Uint8Array(buffer)));
+    case 'epub':
+      return (await extractEpubText(buffer)).text;
+    case 'mobi':
+    case 'azw':
+    case 'azw3':
+      return extractMobiText(buffer);
+    case 'zip':
+      return extractZipContainer(buffer);
+    default:
+      return decodeText(buffer, name);
   }
 }
 
@@ -114,18 +193,16 @@ async function extractZipContainer(buffer: ArrayBuffer): Promise<string> {
   const parts: string[] = [];
   for (const name of Object.keys(zip.files).sort()) {
     const ext = getExt(name);
-    if (ext === "zip" || !isExtractableDocument(name)) continue;
+    if (ext === 'zip' || !isExtractableDocument(name)) continue;
     const file = zip.file(name);
     if (!file) continue;
     try {
-      const text = (await extractFromBuffer(ext, await file.async("arraybuffer"), name)).trim();
+      const text = (await extractFromBuffer(ext, await file.async('arraybuffer'), name)).trim();
       if (text) parts.push(`[${name}]\n${text}`);
-    } catch {
-      continue;
-    }
+    } catch {}
   }
-  const out = parts.join("\n\n").trim();
-  if (!out) throw new Error("No readable text found in archive");
+  const out = parts.join('\n\n').trim();
+  if (!out) throw new Error('No readable text found in archive');
   return out;
 }
 

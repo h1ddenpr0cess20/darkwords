@@ -161,7 +161,10 @@ export async function fetchLmStudioModels(baseUrl: string): Promise<ModelCatalog
         const chat = models
           .filter((m) => m.type !== 'embeddings' && !EMBEDDING_NAME_RE.test(m.id))
           .map((m) =>
-            lmStudioModelDef(m.id, [m.arch, m.state === 'loaded' ? 'loaded' : null].filter(Boolean).join(' — ') || 'local model'),
+            lmStudioModelDef(
+              m.id,
+              [m.arch, m.state === 'loaded' ? 'loaded' : null].filter(Boolean).join(' — ') || 'local model',
+            ),
           );
         const embeddings = models.filter((m) => m.type === 'embeddings').map((m) => m.id);
         return { chat, embeddings };

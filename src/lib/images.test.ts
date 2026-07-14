@@ -9,9 +9,9 @@ describe('generateImage', () => {
     const controller = new AbortController();
     controller.abort();
 
-    await expect(
-      generateImage({ apiKey: 'k', prompt: 'a cat', signal: controller.signal }),
-    ).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(generateImage({ apiKey: 'k', prompt: 'a cat', signal: controller.signal })).rejects.toMatchObject({
+      name: 'AbortError',
+    });
     expect(fetchSpy).not.toHaveBeenCalled();
 
     vi.unstubAllGlobals();

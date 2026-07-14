@@ -21,6 +21,7 @@ export function Feed() {
   };
 
   /** Switching conversations always lands at the bottom, regardless of where the previous one had scrolled to. */
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fires on conversation switch only
   useEffect(() => {
     pinnedToBottom.current = true;
     const el = ref.current;
@@ -35,6 +36,7 @@ export function Feed() {
    * opened to read. Real content — streamed deltas, new messages, tool
    * results — always bumps `updatedAt`, so auto-follow still tracks those.
    */
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on updatedAt, see above
   useEffect(() => {
     const el = ref.current;
     if (el && pinnedToBottom.current) el.scrollTop = el.scrollHeight;

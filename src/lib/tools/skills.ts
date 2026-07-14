@@ -27,7 +27,9 @@ export function skillTool(skills: Skill[]): ClientTool | null {
       required: ['name'],
     },
     run: async (input) => {
-      const name = String(input.name ?? '').trim().toLowerCase();
+      const name = String(input.name ?? '')
+        .trim()
+        .toLowerCase();
       const skill = enabled.find((s) => s.name.toLowerCase() === name);
       if (!skill) return `Error: no skill named "${input.name}".`;
       return `--- SKILL: ${skill.name} ---\n${skill.content}`;

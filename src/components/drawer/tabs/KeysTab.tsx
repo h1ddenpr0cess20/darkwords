@@ -39,8 +39,8 @@ export function KeysTab() {
       </span>
 
       <span className={styles.hint} style={{ marginTop: 14 }}>
-        Both keys are kept in this browser’s storage and used directly from the page. That is fine for local
-        single-user use; put the keys behind a backend proxy before deploying this anywhere shared.
+        Both keys are kept in this browser’s storage and used directly from the page. That is fine for local single-user
+        use; put the keys behind a backend proxy before deploying this anywhere shared.
       </span>
     </div>
   );

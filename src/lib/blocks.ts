@@ -74,7 +74,7 @@ export function parseBlocks(raw: string): ContentPart[] {
     if (headingMatch || boldOnlyMatch) {
       flushPara();
       flushList();
-      const text = cleanInline((headingMatch ? headingMatch[1] : boldOnlyMatch![1]));
+      const text = cleanInline(headingMatch ? headingMatch[1] : boldOnlyMatch![1]);
       if (text) parts.push({ type: 'heading', text });
       i++;
       continue;

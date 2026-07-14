@@ -4,8 +4,25 @@ import { parseBlocks } from '../lib/blocks';
 import { completeOnce, streamAssistantTurn } from '../lib/anthropic';
 import { partyEngine, type PartyHost, type TranscriptLine } from '../lib/party/engine';
 import { appendMessage, dropMessage, messageText, nowTime, patchMessage, withConvo } from './helpers';
-import { activeModel, apiTarget, effectiveMcpServers, effectiveTools, gatherClientTools, streamCallbacks } from './chatSupport';
+import {
+  activeModel,
+  apiTarget,
+  effectiveMcpServers,
+  effectiveTools,
+  gatherClientTools,
+  streamCallbacks,
+} from './chatSupport';
 import { useAppStore } from './useAppStore';
+
+/**
+ * The conversation each in-flight speaker bubble was created in. Finalize and
+ * discard resolve through this rather than `activeConvoId` — an aborted turn
+ * unwinds *after* a conversation switch has already moved `activeConvoId`
+ * elsewhere, and patching the wrong conversation would leave the real bubble
+ * stuck with `streaming: true` forever (it's persisted wholesale). Entries are
+ * removed once the bubble is finalized or discarded.
+ */
+const bubbleConvo = new Map<string, string>();
 
 /**
  * Bridges the party engine to the store. Registered once, at module load — the
@@ -15,6 +32,7 @@ const host: PartyHost = {
   createSpeakerMessage(character) {
     const id = makeId('a');
     const cid = useAppStore.getState().activeConvoId;
+    bubbleConvo.set(id, cid);
     useAppStore.setState((s) =>
       withConvo(s, cid, (c) =>
         appendMessage(c, {
@@ -42,7 +60,7 @@ const host: PartyHost = {
    */
   async streamTurn({ messageId, character, systemPrompt, prompt, signal }) {
     const s = useAppStore.getState();
-    const cid = s.activeConvoId;
+    const cid = bubbleConvo.get(messageId) ?? s.activeConvoId;
     const model = activeModel(s);
     const enabled = effectiveTools(s);
 
@@ -73,7 +91,8 @@ const host: PartyHost = {
   },
 
   finalizeMessage(messageId) {
-    const cid = useAppStore.getState().activeConvoId;
+    const cid = bubbleConvo.get(messageId) ?? useAppStore.getState().activeConvoId;
+    bubbleConvo.delete(messageId);
     useAppStore.setState((s) =>
       withConvo(s, cid, (c) =>
         patchMessage(c, messageId, (m) => ({
@@ -85,7 +104,8 @@ const host: PartyHost = {
   },
 
   discardMessage(messageId) {
-    const cid = useAppStore.getState().activeConvoId;
+    const cid = bubbleConvo.get(messageId) ?? useAppStore.getState().activeConvoId;
+    bubbleConvo.delete(messageId);
     useAppStore.setState((s) => withConvo(s, cid, (c) => dropMessage(c, messageId)));
   },
 

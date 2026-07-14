@@ -22,6 +22,7 @@ export function DataPanel() {
   const [confirmingClear, setConfirmingClear] = useState(false);
 
   const [used, setUsed] = useState(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deps are re-measure triggers, not inputs
   useEffect(() => {
     void storageUsage().then(setUsed);
   }, [conversations, images]);

@@ -90,8 +90,7 @@ export const idbStorage: StateStorage = {
         localStorage.removeItem(name);
         return legacy;
       }
-    } catch {
-    }
+    } catch {}
     return null;
   },
 
@@ -120,8 +119,7 @@ export async function storageUsage(): Promise<number> {
   try {
     const estimate = await navigator.storage?.estimate?.();
     if (estimate?.usage) return estimate.usage;
-  } catch {
-  }
+  } catch {}
   const stored = await run<string | undefined>('readonly', (store) => store.get('darkwords-store'));
   return stored ? new Blob([stored]).size : 0;
 }

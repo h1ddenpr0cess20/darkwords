@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { MAX_MEMORY_CHARS } from '../../lib/tools/memory';
 import styles from './SettingsPanel.module.css';
@@ -21,15 +21,27 @@ export function MemoryPanel() {
   const [draft, setDraft] = useState('');
   const [limitDraft, setLimitDraft] = useState(String(limit));
 
+  /**
+   * Resync when the store value changes underneath the draft — e.g. async
+   * IndexedDB rehydration landing after mount. Without this, blurring the
+   * untouched field would commit the stale pre-hydration default and trim
+   * memories the user never asked to lose.
+   */
+  useEffect(() => {
+    setLimitDraft(String(limit));
+  }, [limit]);
+
   const submit = () => {
     if (!draft.trim()) return;
     addMemory(draft);
     setDraft('');
   };
 
-  // Committing on blur (not per keystroke) matters: setLimit trims stored
-  // memories immediately, so applying a half-typed value like "" or "5"
-  // while the user is entering "50" would permanently delete memories.
+  /**
+   * Committing on blur (not per keystroke) matters: setLimit trims stored
+   * memories immediately, so applying a half-typed value like "" or "5"
+   * while the user is entering "50" would permanently delete memories.
+   */
   const commitLimit = () => {
     const parsed = Math.floor(Number(limitDraft));
     if (Number.isFinite(parsed) && parsed >= 1) {

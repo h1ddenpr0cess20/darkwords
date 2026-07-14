@@ -28,7 +28,7 @@
 }
 
 .thinkingChevron {
-  transition: transform .15s;
+  transition: transform 0.15s;
 }
 
 .thinkingChevron.open {
@@ -137,6 +137,5 @@
 }
 
 .toolError {
-  color: #E88484;
+  color: #e88484;
 }
-

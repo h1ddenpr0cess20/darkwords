@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Attachment, Effort, McpServer, ModelDef, ToolsEnabled } from '../../types';
 import type { ClientTool } from '../tools/types';
+import { blobToDataUrl } from '../dataUrl';
 import { toApiContent, type ApiMessage, type ContentBlockParam } from './content';
 import { buildTools, buildToolInstructions, summarizeServerToolResult } from './toolConfig';
 
@@ -109,15 +110,6 @@ export function makeThinkTagDemux(onText: (delta: string) => void, onThinking: (
   };
 }
 
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
-}
-
 /**
  * Downloads a file the code interpreter wrote to its container — Anthropic
  * hands back a `file_id` rather than the bytes, so a generated CSV, plot, or
@@ -150,12 +142,7 @@ function collectGeneratedFileIds(content: Anthropic.Beta.BetaContentBlock[]): st
   for (const block of content) {
     if (block.type === 'container_upload') {
       ids.add(block.file_id);
-    } else if (
-      block.type === 'code_execution_tool_result' ||
-      block.type === 'bash_code_execution_tool_result'
-    ) {
-      // `content` is either an error block or a result block whose own
-      // `content` lists the files the execution created.
+    } else if (block.type === 'code_execution_tool_result' || block.type === 'bash_code_execution_tool_result') {
       const result = block.content;
       if (result && 'content' in result && Array.isArray(result.content)) {
         for (const output of result.content) {

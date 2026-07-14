@@ -4,7 +4,7 @@
   gap: 2px;
   margin-top: 4px;
   opacity: 0;
-  transition: opacity .12s;
+  transition: opacity 0.12s;
 }
 
 :global(.dw-row):hover .actions,
@@ -29,7 +29,9 @@
   color: var(--text-7);
   padding: 4px 6px;
   cursor: pointer;
-  transition: color .12s, background .12s;
+  transition:
+    color 0.12s,
+    background 0.12s;
 }
 
 .btn:hover:not(:disabled) {
@@ -38,7 +40,7 @@
 }
 
 .btn:disabled {
-  opacity: .4;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -70,7 +72,7 @@
 }
 
 .navBtn:disabled {
-  opacity: .3;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 

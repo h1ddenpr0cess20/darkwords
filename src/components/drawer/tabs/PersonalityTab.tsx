@@ -23,6 +23,16 @@ export function PersonalityTab() {
   const resetPersonality = useAppStore((s) => s.resetPersonality);
   const newConversation = useAppStore((s) => s.newConversation);
 
+  /**
+   * Picking a preset starts a new chat — continuing an existing one under a
+   * different voice would leave earlier replies in the wrong character.
+   */
+  const pickPersona = (description: string) => {
+    if (!description) return;
+    newConversation({ keepPanel: true });
+    setPersonalityName(description);
+  };
+
   return (
     <>
       <div className={styles.section}>
@@ -52,21 +62,12 @@ export function PersonalityTab() {
             placeholder="e.g. a sarcastic pirate captain"
           />
           <p className={styles.info}>
-            Anything goes: a character, a description, an emoji, an abstract concept. The system prompt becomes
-            “Assume the personality of [this]. Roleplay and never break character.”
+            Anything goes: a character, a description, an emoji, an abstract concept. The system prompt becomes “Assume
+            the personality of [this]. Roleplay and never break character.”
           </p>
 
-          {/* Picking a persona starts a new chat — continuing an existing one under a different voice would leave earlier replies in the wrong character. */}
           <label className={styles.fieldLabel}>Alternates</label>
-          <select
-            className={styles.select}
-            value=""
-            onChange={(e) => {
-              if (!e.target.value) return;
-              newConversation();
-              setPersonalityName(e.target.value);
-            }}
-          >
+          <select className={styles.select} value="" onChange={(e) => pickPersona(e.target.value)}>
             <option value="">Choose a persona…</option>
             {PERSONA_PRESETS.map((p) => (
               <option key={p.label} value={p.description}>
@@ -89,7 +90,7 @@ export function PersonalityTab() {
             <button
               className={styles.secondaryBtn}
               onClick={() => {
-                newConversation();
+                newConversation({ keepPanel: true });
                 resetPersonality();
               }}
             >

@@ -49,7 +49,9 @@ export function patchMessage(
 ): Conversation {
   return {
     ...c,
-    messages: c.messages.map((m) => (m.id === msgId ? { ...m, ...(typeof patch === 'function' ? patch(m) : patch) } : m)),
+    messages: c.messages.map((m) =>
+      m.id === msgId ? { ...m, ...(typeof patch === 'function' ? patch(m) : patch) } : m,
+    ),
     updatedAt: touch ? Date.now() : c.updatedAt,
   };
 }
@@ -72,7 +74,10 @@ export function upsertTool(m: ChatMessage, info: { id: string; name: string; inp
  * when no id matches — some server tool result blocks arrive without a usable
  * `tool_use_id`.
  */
-export function resolveTool(m: ChatMessage, info: { id: string; output: string; isError?: boolean }): Partial<ChatMessage> {
+export function resolveTool(
+  m: ChatMessage,
+  info: { id: string; output: string; isError?: boolean },
+): Partial<ChatMessage> {
   const existing = m.tools ?? [];
   if (!existing.length) return {};
   const target = existing.find((t) => t.id === info.id) ?? [...existing].reverse().find((t) => t.output === undefined);

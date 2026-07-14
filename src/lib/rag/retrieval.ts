@@ -99,6 +99,28 @@ export function isIndexableAttachment(att: Attachment): boolean {
 }
 
 /**
+ * Extracts each readable attachment's full text as a shareable document —
+ * used to hand uploads to the party engine, whose characters see whole
+ * documents in their system prompts rather than retrieved chunks.
+ * Attachments that can't be read (images, unknown formats) are skipped.
+ */
+export async function attachmentsToDocuments(attachments: Attachment[]): Promise<{ name: string; text: string }[]> {
+  const docs: { name: string; text: string }[] = [];
+  for (const att of attachments) {
+    if (!isIndexableAttachment(att)) continue;
+    const file = attachmentToFile(att);
+    if (!file) continue;
+    try {
+      const text = await extractDocumentText(file);
+      if (text.trim()) docs.push({ name: att.name, text });
+    } catch {
+      /* unreadable — skipped, same as indexAttachments */
+    }
+  }
+  return docs;
+}
+
+/**
  * Extracts, chunks, and embeds attachments into the conversation's index.
  * Attachments already indexed (by id) are skipped, so this is safe to call
  * with a message's full attachment list on every send.
@@ -140,7 +162,12 @@ export async function indexAttachments(
   }
 
   if (pending.length) {
-    const vectors = await fetchEmbeddings(target.baseUrl, pending.map((p) => p.text), target.model, signal);
+    const vectors = await fetchEmbeddings(
+      target.baseUrl,
+      pending.map((p) => p.text),
+      target.model,
+      signal,
+    );
     for (let i = 0; i < pending.length; i++) {
       idx.chunks.push({ name: pending[i].name, text: pending[i].text, vector: vectors[i], model: target.model });
     }
@@ -274,7 +301,12 @@ export async function retrieveRelevantChunks(
 
   const stale = idx.chunks.filter((chunk) => chunk.model !== target.model);
   if (stale.length) {
-    const vectors = await fetchEmbeddings(target.baseUrl, stale.map((c) => c.text), target.model, signal);
+    const vectors = await fetchEmbeddings(
+      target.baseUrl,
+      stale.map((c) => c.text),
+      target.model,
+      signal,
+    );
     stale.forEach((chunk, i) => {
       chunk.vector = vectors[i];
       chunk.model = target.model;

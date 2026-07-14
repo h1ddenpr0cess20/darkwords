@@ -5,8 +5,7 @@ export function AboutTab() {
     <div className={styles.section}>
       <div className={styles.sectionLabel}>DARKWORDS</div>
       <p className={styles.info}>
-        A dark, editorial chat client for the Anthropic API and local models — a
-        port of{' '}
+        A dark, editorial chat client for the Anthropic API and local models — a port of{' '}
         <a
           href="https://github.com/h1ddenpr0cess20/Wordmark"
           target="_blank"
@@ -22,17 +21,16 @@ export function AboutTab() {
         STACK
       </div>
       <p className={styles.info}>
-        React 19 + TypeScript, built with Vite. Zustand for state, persisted to
-        IndexedDB. The Anthropic SDK is called directly from the browser — no
-        backend — pointed at either the Anthropic API or an LM Studio server.
+        React 19 + TypeScript, built with Vite. Zustand for state, persisted to IndexedDB. The Anthropic SDK is called
+        directly from the browser — no backend — pointed at either the Anthropic API or an LM Studio server.
       </p>
 
       <div className={styles.sectionLabel} style={{ marginTop: 18 }}>
         PRIVACY
       </div>
       <p className={styles.info}>
-        Everything — conversations, gallery, memories, skills and API keys —
-        lives only in this browser's IndexedDB. Nothing is stored on a server.
+        Everything — conversations, gallery, memories, skills and API keys — lives only in this browser's IndexedDB.
+        Nothing is stored on a server.
       </p>
 
       <div className={styles.sectionLabel} style={{ marginTop: 18 }}>
@@ -59,8 +57,7 @@ export function AboutTab() {
       </p>
 
       <p className={styles.info} style={{ marginTop: 18 }}>
-        Created by Dustin Whyte. The UI was designed with Claude Design and
-        polished with Claude Code.
+        Created by Dustin Whyte. The UI was designed with Claude Design and polished with Claude Code.
       </p>
     </div>
   );

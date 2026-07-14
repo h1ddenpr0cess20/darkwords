@@ -61,7 +61,7 @@
   border: 1px solid var(--field-border-2);
   border-radius: 20px;
   padding: 9px 9px 9px 18px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, .35);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(8px);
 }
 
@@ -112,7 +112,7 @@
 }
 
 .sendBtn:disabled {
-  opacity: .5;
+  opacity: 0.5;
   cursor: default;
 }
 

@@ -6,23 +6,22 @@ import { CodeBlock } from './CodeBlock';
 import { Markdown } from './Markdown';
 import { MessageActions } from './MessageActions';
 import { MarginAnnotations } from './MarginAnnotations';
+import { DownloadIcon } from './icons';
 import styles from './MessageRow.module.css';
 
 function FileIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" style={{ flex: 'none' }}>
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="var(--text-4)"
+      strokeWidth="2"
+      style={{ flex: 'none' }}
+    >
       <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
       <path d="M14 2v6h6" />
-    </svg>
-  );
-}
-
-function DownloadIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}>
-      <path d="M12 3v12" />
-      <path d="M7 11l5 5 5-5" />
-      <path d="M5 21h14" />
     </svg>
   );
 }
@@ -135,7 +134,7 @@ export function MessageRow({ message }: { message: ChatMessage }) {
                 <a key={file.id} className={styles.generatedFile} href={file.dataUrl} download={file.name}>
                   <FileIcon />
                   <span className={styles.attachmentName}>{file.name}</span>
-                  <DownloadIcon />
+                  <DownloadIcon size={11} stroke="var(--text-6)" />
                 </a>
               ))}
             </div>

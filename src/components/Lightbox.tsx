@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../store/useAppStore';
+import { CloseIcon, DownloadIcon } from './icons';
 import styles from './Lightbox.module.css';
 
 /**
@@ -25,7 +26,12 @@ export function Lightbox() {
   const download = () => {
     const a = document.createElement('a');
     a.href = image.src;
-    a.download = `${image.label.replace(/[^\w\s-]/g, '').trim().slice(0, 60) || 'image'}.png`;
+    a.download = `${
+      image.label
+        .replace(/[^\w\s-]/g, '')
+        .trim()
+        .slice(0, 60) || 'image'
+    }.png`;
     a.click();
   };
 
@@ -34,16 +40,10 @@ export function Lightbox() {
       <div className={styles.inner} onClick={(e) => e.stopPropagation()}>
         <div className={styles.bar}>
           <button className={styles.btn} onClick={download} title="Download">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 3v12" />
-              <path d="M7 11l5 5 5-5" />
-              <path d="M5 21h14" />
-            </svg>
+            <DownloadIcon />
           </button>
           <button className={styles.btn} onClick={close} title="Close">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
+            <CloseIcon />
           </button>
         </div>
         <img className={styles.image} src={image.src} alt={image.label} />

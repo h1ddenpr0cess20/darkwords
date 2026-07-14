@@ -40,9 +40,7 @@ export function buildCharacterSystemPrompt(character: PartyCharacter, tools: Par
     const list = tools
       .map((tool) => (tool.description ? `${tool.displayName} — ${tool.description}` : tool.displayName))
       .join('; ');
-    lines.push(
-      `You have access to these tools: ${list}.`,
-    );
+    lines.push(`You have access to these tools: ${list}.`);
     if (tools.some((tool) => tool.key === 'web')) {
       lines.push(
         'When the conversation touches on current events, facts, or anything you are unsure about, search the web before answering.',
@@ -121,11 +119,7 @@ export function buildTurnPrompt(scenario: PartyScenario, history: string[], user
 }
 
 /** Builds the decision prompt asking the model to pick the next speaker. */
-export function buildDecisionPrompt(
-  scenario: PartyScenario,
-  characters: PartyCharacter[],
-  history: string[],
-): string {
+export function buildDecisionPrompt(scenario: PartyScenario, characters: PartyCharacter[], history: string[]): string {
   return `Based on this ${scenario.conversationType} history, reply with the name of the most likely next speaker (matching the participant name exactly) followed by a pipe and your reasoning. Format: <name>|<reason>. If the most recent message directly addresses a participant by name (for example asking them a question), that participant should usually speak next. Otherwise avoid round-robin patterns.\n\nParticipants: ${characters
     .map((c) => c.name)
     .join(', ')}\n\nHistory:\n${history.join('\n')}`;

@@ -62,6 +62,10 @@ const host: PartyHost = {
     });
 
     const message = useAppStore.getState().conversations[cid]?.messages.find((m) => m.id === messageId);
+    // streamAssistantTurn reports API failures through the onError callback
+    // rather than throwing; a turn that errored without producing any text
+    // must fail loudly or the party loops silently against a dead backend.
+    if (message?.error && !message.rawText) throw new Error(message.error);
     return message?.rawText ?? '';
   },
 

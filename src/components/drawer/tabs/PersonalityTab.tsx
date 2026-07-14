@@ -1,5 +1,6 @@
 import { useAppStore } from '../../../store/useAppStore';
 import { PartyForm } from '../PartyForm';
+import { PERSONA_PRESETS } from '../../../lib/personas';
 import type { PromptMode } from '../../../types';
 import styles from '../SettingsPanel.module.css';
 
@@ -41,8 +42,26 @@ export function PersonalityTab() {
       {promptMode === 'personality' && (
         <div className={styles.section}>
           <div className={styles.sectionLabel}>PERSONALITY</div>
+
+          <label className={styles.fieldLabel}>Quick pick</label>
+          <select
+            className={styles.select}
+            value=""
+            onChange={(e) => {
+              if (e.target.value) setPersonalityName(e.target.value);
+            }}
+          >
+            <option value="">Choose a persona…</option>
+            {PERSONA_PRESETS.map((p) => (
+              <option key={p.label} value={p.description}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+
           <input
             className={styles.apiInput}
+            style={{ marginTop: 10 }}
             value={personalityName}
             onChange={(e) => setPersonalityName(e.target.value)}
             placeholder="e.g. a sarcastic pirate captain"

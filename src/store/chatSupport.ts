@@ -1,4 +1,4 @@
-import type { McpServer, ModelDef, ToolsEnabled } from '../types';
+import type { Attachment, McpServer, ModelDef, ToolsEnabled } from '../types';
 import { makeId } from '../lib/id';
 import { buildSystemPrompt } from '../lib/prompt';
 import { resolveModel } from '../lib/models';
@@ -186,6 +186,13 @@ export function streamCallbacks(cid: string, messageId: string) {
     },
     onToolResult: (info: { id: string; output: string; isError?: boolean }) => {
       set((s) => withConvo(s, cid, (c) => patchMessage(c, messageId, (m) => resolveTool(m, info))));
+    },
+    onFileOutput: (file: Attachment) => {
+      set((s) =>
+        withConvo(s, cid, (c) =>
+          patchMessage(c, messageId, (m) => ({ generatedFiles: [...(m.generatedFiles ?? []), file] })),
+        ),
+      );
     },
     onError: (message: string) => {
       set((s) => withConvo(s, cid, (c) => patchMessage(c, messageId, { error: message })));

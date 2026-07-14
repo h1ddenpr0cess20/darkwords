@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { Effort, McpServer, ModelDef, ToolsEnabled } from '../../types';
+import type { Attachment, Effort, McpServer, ModelDef, ToolsEnabled } from '../../types';
 import type { ClientTool } from '../tools/types';
 import { toApiContent, type ApiMessage, type ContentBlockParam } from './content';
 import { buildTools, buildToolInstructions, summarizeServerToolResult } from './toolConfig';
@@ -16,6 +16,8 @@ export interface StreamCallbacks {
   onTextDelta?: (delta: string) => void;
   onToolCall?: (info: { id: string; name: string; input: string }) => void;
   onToolResult?: (info: { id: string; output: string; isError?: boolean }) => void;
+  /** A file the code interpreter wrote to its container and handed back to the user. */
+  onFileOutput?: (file: Attachment) => void;
   onError?: (message: string) => void;
 }
 
@@ -105,6 +107,34 @@ export function makeThinkTagDemux(onText: (delta: string) => void, onThinking: (
       process(true);
     },
   };
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Downloads a file the code interpreter wrote to its container — Anthropic
+ * hands back a `file_id` rather than the bytes, so a generated CSV, plot, or
+ * processed document needs a follow-up Files API round trip before it can be
+ * shown or saved.
+ */
+async function fetchGeneratedFile(client: Anthropic, fileId: string): Promise<Attachment | null> {
+  try {
+    const [metadata, response] = await Promise.all([
+      client.beta.files.retrieveMetadata(fileId),
+      client.beta.files.download(fileId),
+    ]);
+    const dataUrl = await blobToDataUrl(await response.blob());
+    return { id: fileId, name: metadata.filename, mimeType: metadata.mime_type, size: metadata.size_bytes, dataUrl };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -284,6 +314,14 @@ export async function streamAssistantTurn(opts: {
         callbacks.onError?.(err instanceof Error ? err.message : String(err));
       }
       return;
+    }
+
+    const fileIds = finalMessage.content
+      .filter((b): b is Anthropic.Beta.BetaContainerUploadBlock => b.type === 'container_upload')
+      .map((b) => b.file_id);
+    if (fileIds.length) {
+      const files = await Promise.all(fileIds.map((id) => fetchGeneratedFile(client, id)));
+      for (const file of files) if (file) callbacks.onFileOutput?.(file);
     }
 
     if (finalMessage.stop_reason === 'pause_turn') {

@@ -76,6 +76,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
       thinking: target.thinking,
       tools: target.tools,
       imageGen: target.imageGen,
+      generatedFiles: target.generatedFiles,
     };
 
     set((st) =>
@@ -87,6 +88,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
           thinking: undefined,
           tools: undefined,
           imageGen: undefined,
+          generatedFiles: undefined,
           error: undefined,
           streaming: true,
         })),
@@ -139,6 +141,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
               thinking: m.thinking,
               tools: m.tools,
               imageGen: m.imageGen,
+              generatedFiles: m.generatedFiles,
             };
             const variants = [...(m.variants ?? []), fresh];
             return { streaming: false, parts, variants, variantIndex: variants.length - 1 };

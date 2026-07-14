@@ -17,6 +17,16 @@ function FileIcon() {
   );
 }
 
+function DownloadIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}>
+      <path d="M12 3v12" />
+      <path d="M7 11l5 5 5-5" />
+      <path d="M5 21h14" />
+    </svg>
+  );
+}
+
 export function MessageRow({ message }: { message: ChatMessage }) {
   const { accent, accentBg } = useAccent();
   const openLightbox = useAppStore((s) => s.openLightbox);
@@ -91,6 +101,18 @@ export function MessageRow({ message }: { message: ChatMessage }) {
               <figcaption className={styles.caption}>{img.label}</figcaption>
             </figure>
           ))}
+
+          {(message.generatedFiles ?? []).length > 0 && (
+            <div className={styles.attachments}>
+              {(message.generatedFiles ?? []).map((file) => (
+                <a key={file.id} className={styles.generatedFile} href={file.dataUrl} download={file.name}>
+                  <FileIcon />
+                  <span className={styles.attachmentName}>{file.name}</span>
+                  <DownloadIcon />
+                </a>
+              ))}
+            </div>
+          )}
 
           {!message.streaming && <MessageActions message={message} />}
         </div>

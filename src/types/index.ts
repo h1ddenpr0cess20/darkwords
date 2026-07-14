@@ -60,6 +60,7 @@ export interface MessageVariant {
   thinking?: string;
   tools?: ToolCallInfo[];
   imageGen?: ImageGenInfo[];
+  generatedFiles?: Attachment[];
 }
 
 /**
@@ -82,6 +83,8 @@ export interface ChatMessage {
   thinkingOpen?: boolean;
   tools?: ToolCallInfo[];
   imageGen?: ImageGenInfo[];
+  /** Files the assistant's code execution wrote out, available to download. */
+  generatedFiles?: Attachment[];
   streaming?: boolean;
   error?: string;
   /** Every version of this reply, oldest first. Present once regenerated. */

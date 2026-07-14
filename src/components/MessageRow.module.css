@@ -68,6 +68,24 @@
   white-space: nowrap;
 }
 
+.generatedFile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+  border-radius: 7px;
+  padding: 5px 10px;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color .12s;
+}
+
+.generatedFile:hover {
+  border-color: var(--accent);
+}
+
 .attachmentName {
   font-size: 11px;
   font-family: var(--font-mono);

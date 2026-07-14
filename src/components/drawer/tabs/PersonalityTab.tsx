@@ -59,9 +59,10 @@ export function PersonalityTab() {
             ))}
           </select>
 
-          <input
-            className={styles.apiInput}
+          <textarea
+            className={styles.textarea}
             style={{ marginTop: 10 }}
+            rows={3}
             value={personalityName}
             onChange={(e) => setPersonalityName(e.target.value)}
             placeholder="e.g. a sarcastic pirate captain"

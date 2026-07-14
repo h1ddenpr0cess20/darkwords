@@ -1,15 +1,18 @@
 # Darkwords
 
-A dark, editorial chat client for the Anthropic API — a port of [Wordmark](https://github.com/h1ddenpr0cess20/Wordmark)'s
-feature set onto Claude, with a new UI. Icon rail, manuscript-style feed with
-reasoning and tool calls as margin annotations, a floating input bar, and a
-left-hand drawer for Settings, History and a media Gallery.
+A dark, editorial chat client for the Anthropic API and local models — a port of
+[Wordmark](https://github.com/h1ddenpr0cess20/Wordmark)'s feature set onto
+Claude, with a new UI. Icon rail, manuscript-style feed with reasoning and tool
+calls as margin annotations, a floating input bar, and a left-hand drawer for
+Settings, History and a media Gallery. On small screens the rail becomes a
+bottom bar and the drawer a full-width sheet.
 
 ## Stack
 
 - React 19 + TypeScript, built with Vite
 - Zustand for state, persisted to IndexedDB
-- `@anthropic-ai/sdk`, called directly from the browser (no backend)
+- `@anthropic-ai/sdk`, called directly from the browser (no backend) — pointed
+  at either `api.anthropic.com` or LM Studio's Anthropic-compatible server
 - OpenAI Images API (`gpt-image-2`) for the image-generation tool
 
 ## Running it
@@ -21,8 +24,12 @@ npm run dev
 
 Then open **Settings → Keys**:
 
-- **Anthropic key** (`sk-ant-…`) — required for chat.
+- **Anthropic key** (`sk-ant-…`) — required for chat with Claude.
 - **OpenAI key** (`sk-…`) — optional; only for image generation.
+
+Or switch **Settings → Model** to **LM Studio** to chat with local models — no
+key needed, just LM Studio running with its server enabled (default
+`http://localhost:1234`).
 
 ```sh
 npm run build      # type-check + production build to dist/
@@ -33,8 +40,18 @@ npm run lint       # type-check only
 ## Features
 
 **Chat** — streaming replies with adaptive thinking, a collapsible reasoning
-panel, markdown and syntax-highlighted code, file attachments (images and PDFs
-as native content blocks, text files inlined), and a stop control.
+panel (rendered as markdown, scrollable when long), markdown and
+syntax-highlighted code, file attachments (images and PDFs as native content
+blocks, text files inlined), and a stop control.
+
+**Local models via LM Studio** — the same client pointed at LM Studio's
+Anthropic-compatible server. The model list comes from the server, reasoning
+support is detected per model (with `<think>`-tag output split into the
+reasoning panel for models that emit it inline), attached documents are
+indexed and searched locally with an embedding model instead of Anthropic's
+file blocks, and MCP servers are contacted from the browser rather than
+through Anthropic's connector. Anthropic-only server tools (web search, code
+interpreter) are unavailable.
 
 **Party mode** — an autonomous multi-character group chat. Define a cast (name,
 persona, per-character tool grants) and a scenario (topic, setting, mood,
@@ -48,12 +65,13 @@ the control bar above the input.
 
 | Tool | Runs where |
 | --- | --- |
-| Web search | Anthropic's servers |
-| Code interpreter | Anthropic's servers (sandboxed Python) |
+| Web search | Anthropic's servers (Anthropic only) |
+| Code interpreter | Anthropic's servers, sandboxed Python (Anthropic only) |
 | Image generation | Your browser → OpenAI `gpt-image-2` |
 | Memory (`remember` / `forget`) | Your browser |
 | Skills (`load_skill`) | Your browser |
-| MCP servers | Anthropic's MCP connector |
+| MCP servers | Anthropic's MCP connector, or your browser on LM Studio |
+| Document search (RAG) | Your browser, with an LM Studio embedding model |
 
 Anthropic has no image-generation endpoint, so image generation is a
 *client-side* tool: Claude calls it, Darkwords fulfils the call against an
@@ -76,16 +94,20 @@ Custom (a verbatim system prompt), None, or Party.
 **Reasoning effort** — `low` … `max`, overriding the model's default.
 
 **Everything is local** — conversations, gallery, memories, skills and keys all
-live in this browser's `localStorage`. Export and import the lot as JSON from
+live in this browser's IndexedDB. Export and import the lot as JSON from
 Settings → Data (keys are deliberately excluded from exports).
 
 ## Model capabilities
 
+The Claude catalog is fixed: **Fable 5**, **Opus 4.8**, **Sonnet 5** (the
+default) and **Haiku 4.5**. LM Studio models are whatever the server reports.
 Tool selection adapts to the model, because they don't all support the same
 things:
 
 - Haiku 4.5 has no extended thinking and no programmatic tool calling, so the
   reasoning-effort control doesn't apply and the code interpreter is withheld.
+- LM Studio models get a thinking budget only when the server reports the model
+  can reason.
 - `web_search_20260209` filters results by running code under the hood. Declared
   next to an explicit `code_execution` tool it confuses the model into writing
   code for things it should just search, so the basic `web_search_20250305` is
@@ -96,19 +118,31 @@ things:
 ```
 src/
   components/       Rail, TopStrip, Feed, MessageRow, InputBar, PartyBar, drawer/…
-  store/            Zustand store — state + send/streaming orchestration
+  store/            Zustand store — slices/ per domain, plus streaming callbacks
   lib/
-    anthropic.ts    Messages API streaming client + the tool loop
+    anthropic/      Messages API streaming client + the tool loop
+    models.ts       model catalogs — hardcoded Claude list, LM Studio fetch
+    rag/            local document RAG — parsers, embeddings, retrieval
     images.ts       OpenAI image generation (gpt-image-2)
     prompt.ts       system-prompt composition
     party/          party mode — types, prompts, turn-loop engine
-    tools/          client-side tools (image, memory, skills)
+    tools/          client-side tools (image, memory, skills, browser MCP)
     blocks.ts       markdown-ish text -> paragraph/heading/list/code blocks
     highlight.tsx   regex-based code syntax highlighting
-    config.ts       models, themes
+    idbStorage.ts   debounced IndexedDB persistence
   types/            shared domain types
   styles/           design tokens + global resets
 ```
+
+## Deployment
+
+- **CI** — GitHub Actions typechecks and builds every push and PR.
+- **Docker** — `docker build -t darkwords .` produces an nginx image serving
+  the static build. Pushing a `v*` tag publishes it to DockerHub (multi-arch,
+  needs `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` repo secrets).
+- **Vercel** — import the repo and deploy; `vercel.json` carries the SPA
+  rewrite. Remember the keys-in-browser caveat below before sharing a
+  deployment.
 
 ## Notes
 

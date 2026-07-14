@@ -1,3 +1,5 @@
+<img src="public/icon-512.png" alt="" width="96" height="96" />
+
 # Darkwords
 
 A dark, editorial chat client for the Anthropic API and local models — a port of

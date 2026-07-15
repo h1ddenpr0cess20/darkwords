@@ -29,6 +29,16 @@ const MAX_TOOL_ROUNDTRIPS = 8;
 const MCP_BETA = 'mcp-client-2025-11-20';
 
 /**
+ * Same-origin path proxied to https://api.anthropic.com by whichever server is
+ * hosting the app (Vite dev server, nginx, Vercel — see vite.config.ts,
+ * nginx.conf, vercel.json). The Messages API answers CORS preflights, but the
+ * Files API does not, so downloading code-interpreter outputs directly from
+ * the browser is blocked no matter what headers the SDK sends. Routing those
+ * requests through our own origin sidesteps CORS entirely.
+ */
+const filesProxyBase = () => `${window.location.origin}/anthropic`;
+
+/**
  * One-shot, non-streaming completion with no tools and no thinking. Used for the
  * party engine's speaker-decision request, where we want a short, cheap answer.
  */
@@ -114,7 +124,9 @@ export function makeThinkTagDemux(onText: (delta: string) => void, onThinking: (
  * Downloads a file the code interpreter wrote to its container — Anthropic
  * hands back a `file_id` rather than the bytes, so a generated CSV, plot, or
  * processed document needs a follow-up Files API round trip before it can be
- * shown or saved.
+ * shown or saved. The client passed in must target the same-origin files
+ * proxy (see filesProxyBase) — api.anthropic.com rejects the Files API's
+ * CORS preflight, so a direct browser call never leaves the station.
  */
 async function fetchGeneratedFile(client: Anthropic, fileId: string): Promise<Attachment | null> {
   try {
@@ -344,7 +356,14 @@ export async function streamAssistantTurn(opts: {
 
     const fileIds = collectGeneratedFileIds(finalMessage.content);
     if (fileIds.length) {
-      const files = await Promise.all(fileIds.map((id) => fetchGeneratedFile(client, id)));
+      // Code-interpreter outputs only ever come from api.anthropic.com (it's a
+      // server tool), and its Files API blocks cross-origin browser requests —
+      // fetch them through the same-origin proxy instead. A custom baseURL
+      // (LM Studio) is same-machine and keeps using the main client.
+      const filesClient = baseURL
+        ? client
+        : new Anthropic({ apiKey: apiKey || 'none', baseURL: filesProxyBase(), dangerouslyAllowBrowser: true });
+      const files = await Promise.all(fileIds.map((id) => fetchGeneratedFile(filesClient, id)));
       for (const file of files) if (file) callbacks.onFileOutput?.(file);
     }
 

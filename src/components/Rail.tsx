@@ -95,6 +95,9 @@ export function Rail() {
   const setProvider = useAppStore((s) => s.setProvider);
   const anthropicModels = useAppStore((s) => s.anthropicModels);
   const lmStudioModels = useAppStore((s) => s.lmStudioModels);
+  const modelsLoading = useAppStore((s) => s.modelsLoading);
+  const modelsError = useAppStore((s) => s.modelsError);
+  const refreshModels = useAppStore((s) => s.refreshModels);
   const selectedModelId = useAppStore((s) => (s.provider === 'lmstudio' ? s.lmStudioModelId : s.selectedModelId));
 
   const models = provider === 'lmstudio' ? lmStudioModels : anthropicModels;
@@ -102,6 +105,18 @@ export function Rail() {
   const cssVars = { '--accent': accent, '--accent-bg': accentBg } as CSSProperties;
 
   const modelWrapRef = useRef<HTMLDivElement>(null);
+  const fetchedForOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (!modelPickerOpen) {
+      fetchedForOpenRef.current = false;
+      return;
+    }
+    if (!fetchedForOpenRef.current && provider === 'lmstudio' && lmStudioModels.length === 0 && !modelsLoading) {
+      fetchedForOpenRef.current = true;
+      void refreshModels();
+    }
+  }, [modelPickerOpen, provider, lmStudioModels.length, modelsLoading, refreshModels]);
 
   useEffect(() => {
     if (!modelPickerOpen) return;
@@ -180,7 +195,13 @@ export function Rail() {
             <div className={styles.modelDropdownLabel}>MODEL</div>
             {models.length === 0 && (
               <div className={styles.modelDropdownLabel} style={{ padding: '6px 10px' }}>
-                No models loaded — open Settings → Model
+                {provider === 'lmstudio' && modelsLoading
+                  ? 'Loading models…'
+                  : provider === 'lmstudio' && modelsError
+                    ? modelsError
+                    : provider === 'lmstudio'
+                      ? 'No models found — is LM Studio running?'
+                      : 'No models loaded — open Settings → Model'}
               </div>
             )}
             {models.map((mo) => (

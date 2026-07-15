@@ -356,10 +356,6 @@ export async function streamAssistantTurn(opts: {
 
     const fileIds = collectGeneratedFileIds(finalMessage.content);
     if (fileIds.length) {
-      // Code-interpreter outputs only ever come from api.anthropic.com (it's a
-      // server tool), and its Files API blocks cross-origin browser requests —
-      // fetch them through the same-origin proxy instead. A custom baseURL
-      // (LM Studio) is same-machine and keeps using the main client.
       const filesClient = baseURL
         ? client
         : new Anthropic({ apiKey: apiKey || 'none', baseURL: filesProxyBase(), dangerouslyAllowBrowser: true });

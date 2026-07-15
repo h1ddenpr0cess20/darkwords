@@ -4,6 +4,7 @@ import { parseBlocks } from '../../lib/blocks';
 import { streamAssistantTurn, type ApiMessage } from '../../lib/anthropic';
 import { partyEngine } from '../../lib/party/engine';
 import { attachmentsToDocuments } from '../../lib/rag/retrieval';
+import { autoplayFinalizedMessage } from '../../lib/ttsAutoplay';
 import { partyOwnsInput } from './partySlice';
 import type { MessageVariant } from '../../types';
 import { appendMessage, messageText, nowTime, patchMessage, withConvo } from '../helpers';
@@ -147,6 +148,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
           }),
         ),
       );
+      autoplayFinalizedMessage(get(), cid, msgId);
     }
   },
 
@@ -293,6 +295,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
             })),
           ),
         );
+        autoplayFinalizedMessage(get(), cid, assistantId);
       }
     }
   },

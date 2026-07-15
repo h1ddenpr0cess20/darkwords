@@ -75,7 +75,8 @@ export function DataPanel() {
         DANGER ZONE
       </div>
       <p className={styles.info}>
-        Deletes every conversation, image, memory, skill and MCP server in this browser. Your API keys are kept.
+        Deletes every conversation, image, memory, skill, MCP server and cached voice clip in this browser. Your API
+        keys are kept.
       </p>
       <div className={styles.partyActions}>
         {confirmingClear ? (

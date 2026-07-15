@@ -2,6 +2,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { ModelTab } from './tabs/ModelTab';
 import { ToolsTab } from './tabs/ToolsTab';
 import { PersonalityTab } from './tabs/PersonalityTab';
+import { VoiceTab } from './tabs/VoiceTab';
 import { ThemeTab } from './tabs/ThemeTab';
 import { KeysTab } from './tabs/KeysTab';
 import { AboutTab } from './tabs/AboutTab';
@@ -18,6 +19,7 @@ const TABS: { key: SettingsTab; label: string }[] = [
   { key: 'tools', label: 'Tools' },
   { key: 'memory', label: 'Memory' },
   { key: 'skills', label: 'Skills' },
+  { key: 'voice', label: 'Voice' },
   { key: 'theme', label: 'Theme' },
   { key: 'apikeys', label: 'Keys' },
   { key: 'data', label: 'Data' },
@@ -53,6 +55,7 @@ export function SettingsPanel() {
         {panelTab === 'personality' && <PersonalityTab />}
         {panelTab === 'memory' && <MemoryPanel />}
         {panelTab === 'skills' && <SkillsPanel />}
+        {panelTab === 'voice' && <VoiceTab />}
         {panelTab === 'theme' && <ThemeTab />}
         {panelTab === 'apikeys' && <KeysTab />}
         {panelTab === 'data' && <DataPanel />}

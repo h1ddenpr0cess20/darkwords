@@ -29,7 +29,7 @@ npm run dev
 Then open **Settings → Keys**:
 
 - **Anthropic key** (`sk-ant-…`) — required for chat with Claude.
-- **OpenAI key** (`sk-…`) — optional; only for image generation.
+- **OpenAI key** (`sk-…`) — optional; for image generation and voice playback.
 
 Or switch **Settings → Model** to **LM Studio** to chat with local models — no
 key needed, just LM Studio running with its server enabled (default
@@ -83,6 +83,12 @@ external image model, and the result comes back as a tool result and lands in
 the feed and Gallery. With no OpenAI key set, the tool isn't offered to the
 model at all.
 
+**Voice** — read assistant replies aloud with OpenAI text-to-speech
+(`gpt-4o-mini-tts`). Per-message play/pause/stop/download controls, optional
+autoplay that speaks each reply as it lands, a voice picker, and free-text voice
+direction (or a personality-derived one). Reuses the OpenAI key, so it works on
+Anthropic or LM Studio. See [docs/voice.md](docs/voice.md).
+
 **Memory** — Claude can save brief facts about you with the `remember` tool.
 They're kept to a FIFO limit and appended to the system prompt every turn. You
 can add, remove and clear them yourself in Settings → Memory.
@@ -128,6 +134,8 @@ src/
     models.ts       model catalogs — hardcoded Claude list, LM Studio fetch
     rag/            local document RAG — parsers, embeddings, retrieval
     images.ts       OpenAI image generation (gpt-image-2)
+    tts.ts          OpenAI text-to-speech (gpt-4o-mini-tts)
+    ttsPlayback.ts  per-message voice playback controller
     prompt.ts       system-prompt composition
     party/          party mode — types, prompts, turn-loop engine
     tools/          client-side tools (image, memory, skills, browser MCP)
@@ -138,9 +146,17 @@ src/
   styles/           design tokens + global resets
 ```
 
+## Documentation
+
+Full, code-backed docs live in [`docs/`](docs/README.md) — getting started,
+architecture, models & providers, LM Studio, tools, voice, party mode, memory,
+skills, documents/RAG, storage, theming, deployment, development, and security,
+plus the project's [AI output disclaimer](docs/ai-output-disclaimer.md) and
+[not-a-companion](docs/not-a-companion.md) policies.
+
 ## Deployment
 
-- **CI** — GitHub Actions typechecks and builds every push and PR.
+- **CI** — GitHub Actions typechecks, tests, and builds every push and PR.
 - **Docker** — `docker build -t darkwords .` produces an nginx image serving
   the static build. Pushing a `v*` tag publishes it to DockerHub (multi-arch,
   needs `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` repo secrets).

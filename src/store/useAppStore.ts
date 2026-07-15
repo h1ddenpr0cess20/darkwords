@@ -6,6 +6,7 @@ import { firstConversation } from './helpers';
 import type { AppState } from './types';
 import { createUiSlice } from './slices/uiSlice';
 import { createSettingsSlice, loadPersonaForConversation } from './slices/settingsSlice';
+import { createTtsSlice } from './slices/ttsSlice';
 import { createLibrarySlice } from './slices/librarySlice';
 import { createDataSlice } from './slices/dataSlice';
 import { createPartySlice, loadPartyForConversation } from './slices/partySlice';
@@ -33,6 +34,7 @@ export const useAppStore = create<AppState>()(
     (...a) => ({
       ...createUiSlice(...a),
       ...createSettingsSlice(...a),
+      ...createTtsSlice(...a),
       ...createLibrarySlice(...a),
       ...createDataSlice(...a),
       ...createPartySlice(...a),
@@ -61,6 +63,10 @@ export const useAppStore = create<AppState>()(
         customPrompt: s.customPrompt,
         verbose: s.verbose,
         effort: s.effort,
+        ttsEnabled: s.ttsEnabled,
+        ttsAutoplay: s.ttsAutoplay,
+        ttsVoice: s.ttsVoice,
+        ttsInstructions: s.ttsInstructions,
         memoryEnabled: s.memoryEnabled,
         memoryLimit: s.memoryLimit,
         memories: s.memories,

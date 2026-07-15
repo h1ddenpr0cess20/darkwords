@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { storageUsage } from '../../lib/idbStorage';
+import { conversationOrderForMode } from '../../store/helpers';
 import styles from './SettingsPanel.module.css';
 
 function formatBytes(bytes: number): string {
@@ -14,7 +15,7 @@ export function DataPanel() {
   const exportData = useAppStore((s) => s.exportData);
   const importData = useAppStore((s) => s.importData);
   const clearAllData = useAppStore((s) => s.clearAllData);
-  const conversations = useAppStore((s) => s.conversationOrder.length);
+  const conversations = useAppStore((s) => conversationOrderForMode(s).length);
   const images = useAppStore((s) => s.galleryItems.length);
 
   const fileRef = useRef<HTMLInputElement>(null);

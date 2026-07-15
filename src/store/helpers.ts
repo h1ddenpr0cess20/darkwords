@@ -1,6 +1,7 @@
 import type { ChatMessage, Conversation } from '../types';
 import { makeId } from '../lib/id';
 import { partsToPlainText } from '../lib/blocks';
+import { APP_MODE, type AppMode } from '../lib/mode';
 import type { AppState } from './types';
 
 export function nowTime(): string {
@@ -14,11 +15,22 @@ export function messageText(m: ChatMessage): string {
 
 export function emptyConversation(): Conversation {
   const id = makeId('conv');
-  return { id, title: 'New conversation', messages: [], createdAt: Date.now(), updatedAt: Date.now() };
+  return { id, title: 'New conversation', messages: [], createdAt: Date.now(), updatedAt: Date.now(), mode: APP_MODE };
 }
 
 /** The conversation every fresh install starts with; also the migration target. */
 export const firstConversation = emptyConversation();
+
+export function conversationMode(c: Conversation): AppMode {
+  return c.mode === 'light' ? 'light' : 'dark';
+}
+
+export function conversationOrderForMode(state: Pick<AppState, 'conversations' | 'conversationOrder'>): string[] {
+  return state.conversationOrder.filter((id) => {
+    const c = state.conversations[id];
+    return c && conversationMode(c) === APP_MODE;
+  });
+}
 
 /**
  * Immutably rewrites one conversation and returns the store patch for it.

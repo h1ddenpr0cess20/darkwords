@@ -2,11 +2,17 @@ import type { MouseEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { partsToPlainText } from '../../lib/blocks';
 import { formatRelativeTime } from '../../lib/time';
+import { conversationMode } from '../../store/helpers';
+import { APP_MODE } from '../../lib/mode';
 import styles from './HistoryPanel.module.css';
 
 export function HistoryPanel() {
   const conversations = useAppStore((s) => s.conversations);
-  const order = useAppStore((s) => s.conversationOrder);
+  const fullOrder = useAppStore((s) => s.conversationOrder);
+  const order = fullOrder.filter((id) => {
+    const c = conversations[id];
+    return c && conversationMode(c) === APP_MODE;
+  });
   const activeConvoId = useAppStore((s) => s.activeConvoId);
   const selectConversation = useAppStore((s) => s.selectConversation);
   const newConversation = useAppStore((s) => s.newConversation);

@@ -2,6 +2,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { CONVERSATION_TYPES, MOODS, type PartyToolKey } from '../../lib/party/types';
 import { PERSONA_PRESETS } from '../../lib/personas';
 import { DEFAULT_PERSONALITY_NAME } from '../../lib/prompt';
+import { APP_MODE } from '../../lib/mode';
 import styles from './SettingsPanel.module.css';
 
 const CHARACTER_TOOLS: { key: PartyToolKey; label: string }[] = [
@@ -11,7 +12,10 @@ const CHARACTER_TOOLS: { key: PartyToolKey; label: string }[] = [
 ];
 
 /** Quick-add characters offered above the cast list: the app's default persona plus the same presets from Settings → Personality. */
-const CHARACTER_PRESETS = [{ label: 'Villain (default)', description: DEFAULT_PERSONALITY_NAME }, ...PERSONA_PRESETS];
+const CHARACTER_PRESETS = [
+  { label: APP_MODE === 'light' ? 'Mentor (default)' : 'Villain (default)', description: DEFAULT_PERSONALITY_NAME },
+  ...PERSONA_PRESETS,
+];
 
 /**
  * Party setup: the scenario the cast converses within, and the cast itself.

@@ -55,7 +55,14 @@ export interface PartySlice {
 }
 
 /** Label colours handed out to new party characters, in order. */
-const CHARACTER_COLORS = ['#7EE787', '#E8B54D', '#8FB9FF', '#E88484', '#C99BFF', '#5FD9C4'];
+const CHARACTER_COLORS = [
+  'var(--party-1)',
+  'var(--party-2)',
+  'var(--party-3)',
+  'var(--party-4)',
+  'var(--party-5)',
+  'var(--party-6)',
+];
 
 /**
  * Stops a running party and returns the state patch that goes with it.

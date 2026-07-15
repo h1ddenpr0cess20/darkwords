@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, protocol, shell } = require("electron");
+const { app, BrowserWindow, clipboard, ipcMain, protocol, shell } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
 
@@ -133,9 +133,13 @@ async function createWindow() {
     }
   });
 
+  const ALLOWED_PERMISSIONS = new Set(["media", "geolocation", "clipboard-read", "clipboard-sanitized-write"]);
   mainWindow.webContents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
-    callback(permission === "media");
+    callback(ALLOWED_PERMISSIONS.has(permission));
   });
+  mainWindow.webContents.session.setPermissionCheckHandler((_webContents, permission) =>
+    ALLOWED_PERMISSIONS.has(permission),
+  );
 
   mainWindow.webContents.session.on("will-download", (_event, item) => {
     item.setSavePath(path.join(app.getPath("downloads"), item.getFilename()));
@@ -173,6 +177,13 @@ if (!gotLock) {
         height: TITLEBAR_HEIGHT,
       });
     } catch {}
+  });
+
+  ipcMain.handle("clipboard:write-text", (_event, text) => {
+    if (typeof text !== "string") {
+      throw new TypeError("Clipboard text must be a string");
+    }
+    clipboard.writeText(text);
   });
 
   app.whenReady().then(async () => {

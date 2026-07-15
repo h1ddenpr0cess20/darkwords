@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { highlightCode } from '../lib/highlight';
+import { copyText } from '../lib/desktop';
 import styles from './CodeBlock.module.css';
 
 export function CodeBlock({ code, language }: { code: string; language?: string }) {
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
+    if (await copyText(code)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
-    } catch {}
+    }
   };
 
   return (

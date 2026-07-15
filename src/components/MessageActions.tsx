@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ChatMessage } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { partyOwnsInput } from '../store/slices/partySlice';
+import { copyText } from '../lib/desktop';
 import { TtsControls } from './TtsControls';
 import styles from './MessageActions.module.css';
 
@@ -83,11 +84,10 @@ export function MessageActions({ message }: { message: ChatMessage }) {
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(message.rawText);
+    if (await copyText(message.rawText)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
-    } catch {}
+    }
   };
 
   const isAssistant = message.role === 'assistant';

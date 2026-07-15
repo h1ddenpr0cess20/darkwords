@@ -29,14 +29,11 @@
   color: var(--text-7);
   padding: 4px 6px;
   cursor: pointer;
-  transition:
-    color 0.12s,
-    background 0.12s;
+  transition: color 0.12s;
 }
 
 .btn:hover:not(:disabled) {
   color: var(--accent);
-  background: var(--row-bg);
 }
 
 .btn:disabled {

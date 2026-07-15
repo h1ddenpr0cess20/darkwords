@@ -18,8 +18,9 @@ export function LocationTab() {
     <div className={styles.section}>
       <div className={styles.sectionLabel}>LOCATION</div>
       <p className={styles.info}>
-        Shares your approximate coordinates and timezone with the model so it can answer location-aware questions. The
-        position comes from your browser's geolocation only — nothing is sent to any third-party service.
+        Shares your approximate location and timezone with the model so it can answer location-aware questions. The
+        position comes from your browser's geolocation, reverse-geocoded to a city via BigDataCloud; on the desktop app
+        it falls back to approximate IP-based lookup (ipapi.co).
       </p>
 
       <div className={styles.toolRow}>

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, protocol, shell } = require("electron");
+const { app, BrowserWindow, clipboard, ipcMain, protocol, shell } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
 
@@ -177,6 +177,13 @@ if (!gotLock) {
         height: TITLEBAR_HEIGHT,
       });
     } catch {}
+  });
+
+  ipcMain.handle("clipboard:write-text", (_event, text) => {
+    if (typeof text !== "string") {
+      throw new TypeError("Clipboard text must be a string");
+    }
+    clipboard.writeText(text);
   });
 
   app.whenReady().then(async () => {

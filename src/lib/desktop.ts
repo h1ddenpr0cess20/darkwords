@@ -12,7 +12,7 @@
 export interface DesktopBridge {
   platform: string;
   setTitleBarColors: (colors: { color: string; symbolColor: string }) => Promise<void>;
-  writeText?: (text: string) => void;
+  writeText?: (text: string) => Promise<void>;
 }
 
 declare global {
@@ -41,8 +41,12 @@ export function isDesktopApp(): boolean {
 export async function copyText(text: string): Promise<boolean> {
   const native = desktopBridge()?.writeText;
   if (native) {
-    native(text);
-    return true;
+    try {
+      await native(text);
+      return true;
+    } catch {
+      return false;
+    }
   }
   try {
     await navigator.clipboard.writeText(text);

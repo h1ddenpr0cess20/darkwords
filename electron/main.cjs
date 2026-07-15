@@ -133,9 +133,13 @@ async function createWindow() {
     }
   });
 
+  const ALLOWED_PERMISSIONS = new Set(["media", "geolocation", "clipboard-read", "clipboard-sanitized-write"]);
   mainWindow.webContents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
-    callback(permission === "media");
+    callback(ALLOWED_PERMISSIONS.has(permission));
   });
+  mainWindow.webContents.session.setPermissionCheckHandler((_webContents, permission) =>
+    ALLOWED_PERMISSIONS.has(permission),
+  );
 
   mainWindow.webContents.session.on("will-download", (_event, item) => {
     item.setSavePath(path.join(app.getPath("downloads"), item.getFilename()));

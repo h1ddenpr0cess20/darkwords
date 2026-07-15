@@ -12,6 +12,7 @@
 export interface DesktopBridge {
   platform: string;
   setTitleBarColors: (colors: { color: string; symbolColor: string }) => Promise<void>;
+  writeText?: (text: string) => void;
 }
 
 declare global {
@@ -35,4 +36,18 @@ export function desktopBridge(): DesktopBridge | undefined {
 export function isDesktopApp(): boolean {
   if (typeof window === 'undefined') return false;
   return Boolean(window.darkwordsDesktop) || navigator.userAgent.includes('Electron');
+}
+
+export async function copyText(text: string): Promise<boolean> {
+  const native = desktopBridge()?.writeText;
+  if (native) {
+    native(text);
+    return true;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
 }

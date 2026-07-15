@@ -1,5 +1,6 @@
 import type { Conversation, GalleryItem, McpServer, Memory, Skill } from '../../types';
 import { partyEngine } from '../../lib/party/engine';
+import { ttsPlayback } from '../../lib/ttsPlayback';
 import { emptyConversation } from '../helpers';
 import type { SliceCreator } from '../types';
 
@@ -82,6 +83,7 @@ export const createDataSlice: SliceCreator<DataSlice> = (set, get) => ({
 
   clearAllData: () => {
     partyEngine.reset();
+    void ttsPlayback.clearAll();
     const fresh = emptyConversation();
     set({
       conversations: { [fresh.id]: fresh },

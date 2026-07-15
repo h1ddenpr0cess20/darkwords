@@ -3,6 +3,7 @@ import { makeId } from '../lib/id';
 import { parseBlocks } from '../lib/blocks';
 import { completeOnce, streamAssistantTurn } from '../lib/anthropic';
 import { partyEngine, type PartyHost, type TranscriptLine } from '../lib/party/engine';
+import { autoplayFinalizedMessage } from '../lib/ttsAutoplay';
 import { appendMessage, dropMessage, messageText, nowTime, patchMessage, withConvo } from './helpers';
 import {
   activeModel,
@@ -101,6 +102,7 @@ const host: PartyHost = {
         })),
       ),
     );
+    autoplayFinalizedMessage(useAppStore.getState(), cid, messageId);
   },
 
   discardMessage(messageId) {

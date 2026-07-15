@@ -190,6 +190,7 @@ export type SettingsTab =
   | 'personality'
   | 'memory'
   | 'skills'
+  | 'voice'
   | 'theme'
   | 'apikeys'
   | 'data'

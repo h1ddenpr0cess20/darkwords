@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ChatMessage } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { partyOwnsInput } from '../store/slices/partySlice';
+import { TtsControls } from './TtsControls';
 import styles from './MessageActions.module.css';
 
 function CopyIcon() {
@@ -77,6 +78,7 @@ export function MessageActions({ message }: { message: ChatMessage }) {
   const selectVariant = useAppStore((s) => s.selectVariant);
   const isSending = useAppStore((s) => s.isSending);
   const inParty = useAppStore(partyOwnsInput);
+  const ttsEnabled = useAppStore((s) => s.ttsEnabled);
 
   const [copied, setCopied] = useState(false);
 
@@ -141,6 +143,8 @@ export function MessageActions({ message }: { message: ChatMessage }) {
           </button>
         </span>
       )}
+
+      {isAssistant && ttsEnabled && message.rawText && <TtsControls message={message} />}
     </div>
   );
 }

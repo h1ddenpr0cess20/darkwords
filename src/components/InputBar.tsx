@@ -121,12 +121,12 @@ export function InputBar() {
             )}
             {uploadGroups.map((g) => (
               <div key={g.key} className={styles.uploadChip}>
-                <span className={styles.uploadName}>
-                  {g.folder ? `${g.folder} (${g.ids.length})` : g.name}
-                </span>
+                <span className={styles.uploadName}>{g.folder ? `${g.folder} (${g.ids.length})` : g.name}</span>
                 <button
                   className={styles.uploadRemove}
-                  onClick={() => g.ids.forEach((id) => removeUpload(id))}
+                  onClick={() => {
+                    for (const id of g.ids) removeUpload(id);
+                  }}
                 >
                   ✕
                 </button>

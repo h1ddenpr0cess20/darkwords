@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { ChatMessage, Conversation } from '../types';
+import { APP_MODE } from './mode';
 
 export type ExportFormatKey = 'txt' | 'md' | 'html' | 'json' | 'csv';
 
@@ -93,62 +94,101 @@ function csvCell(value: string): string {
   return `"${guarded.replace(/"/g, '""')}"`;
 }
 
+const EXPORT_PALETTES = {
+  dark: {
+    bg: '#121210',
+    text0: '#ececea',
+    text1: '#dedfd9',
+    text2: '#c7c8c2',
+    text3: '#9a9c95',
+    text5: '#75776d',
+    text6: '#66685f',
+    text7: '#5c5e55',
+    border: '#262720',
+    rowAlt: '#1e1f19',
+    codeBg: '#0e0f0c',
+    codeBorder: '#2a2b24',
+    reasoningBg: '#15160f',
+    accent: '#7ee787',
+    accentSoft: 'rgba(126, 231, 135, 0.06)',
+  },
+  light: {
+    bg: '#f7f7f4',
+    text0: '#1a1b16',
+    text1: '#26271f',
+    text2: '#33342b',
+    text3: '#52534a',
+    text5: '#74766c',
+    text6: '#85877d',
+    text7: '#94968c',
+    border: '#e4e4db',
+    rowAlt: '#f0f0ea',
+    codeBg: '#f2f2ec',
+    codeBorder: '#d8d8cf',
+    reasoningBg: '#fbfbf7',
+    accent: '#1a7f37',
+    accentSoft: 'rgba(26, 127, 55, 0.08)',
+  },
+} as const;
+
+const P = EXPORT_PALETTES[APP_MODE];
+
 /** Standalone stylesheet inlined into the HTML export, using Darkwords' palette directly. */
 const HTML_STYLES = `
 * { box-sizing: border-box; }
 body {
   margin: 0; padding: 32px 16px;
-  background: #121210; color: #ececea;
+  background: ${P.bg}; color: ${P.text0};
   font-family: "Inter", system-ui, -apple-system, sans-serif;
   font-size: 16px; line-height: 1.6;
 }
 .export-container { max-width: 820px; margin: 0 auto; }
-.export-header { margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid #262720; }
+.export-header { margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid ${P.border}; }
 .export-header h1 { margin: 0 0 4px; font-size: 1.4rem; font-family: "Newsreader", serif; }
-.export-header .export-sub { color: #75776d; font-size: 0.85rem; }
+.export-header .export-sub { color: ${P.text5}; font-size: 0.85rem; }
 .chat { display: flex; flex-direction: column; gap: 20px; }
 .message { display: flex; align-items: flex-start; gap: 12px; }
 .avatar {
   width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; margin-top: 2px;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 600; font-size: 0.78rem; color: #121210; background: #7ee787;
+  font-weight: 600; font-size: 0.78rem; color: ${P.bg}; background: ${P.accent};
 }
-.message.user .avatar { background: #1e1f19; color: #c7c8c2; }
+.message.user .avatar { background: ${P.rowAlt}; color: ${P.text2}; }
 .bubble { min-width: 0; flex: 1; }
 .meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
-.sender { font-weight: 600; font-size: 0.85rem; color: #dedfd9; }
-.timestamp { font-size: 0.72rem; color: #66685f; }
-.content { overflow-wrap: break-word; word-break: break-word; color: #c7c8c2; }
+.sender { font-weight: 600; font-size: 0.85rem; color: ${P.text1}; }
+.timestamp { font-size: 0.72rem; color: ${P.text6}; }
+.content { overflow-wrap: break-word; word-break: break-word; color: ${P.text2}; }
 .content > :first-child { margin-top: 0; }
 .content > :last-child { margin-bottom: 0; }
 .content p { margin: 0 0 12px; }
-.content h1, .content h2, .content h3, .content h4 { margin: 16px 0 8px; line-height: 1.3; color: #ececea; }
+.content h1, .content h2, .content h3, .content h4 { margin: 16px 0 8px; line-height: 1.3; color: ${P.text0}; }
 .content ul, .content ol { margin: 8px 0 14px; padding-left: 24px; }
 .content li { margin-bottom: 6px; }
-.content li::marker { color: #7ee787; }
+.content li::marker { color: ${P.accent}; }
 .content blockquote {
-  margin: 14px 0; padding: 8px 16px; border-left: 3px solid #7ee787;
-  background: rgba(126, 231, 135, 0.06); color: #9a9c95; border-radius: 0 8px 8px 0;
+  margin: 14px 0; padding: 8px 16px; border-left: 3px solid ${P.accent};
+  background: ${P.accentSoft}; color: ${P.text3}; border-radius: 0 8px 8px 0;
 }
-.content a { color: #7ee787; }
+.content a { color: ${P.accent}; }
 .content pre {
-  background: #0e0f0c; color: #dedfd9; border: 1px solid #262720;
+  background: ${P.codeBg}; color: ${P.text1}; border: 1px solid ${P.border};
   padding: 14px 16px; border-radius: 8px; overflow-x: auto; margin: 10px 0;
 }
 .content pre code { font-family: "JetBrains Mono", "Menlo", monospace; font-size: 0.85rem; white-space: pre; }
 .content code:not(pre code) {
   font-family: "JetBrains Mono", "Menlo", monospace; font-size: 0.85em;
-  padding: 0.12em 0.36em; border-radius: 5px; background: #1e1f19; border: 1px solid #2a2b24;
+  padding: 0.12em 0.36em; border-radius: 5px; background: ${P.rowAlt}; border: 1px solid ${P.codeBorder};
 }
 .content table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; }
-.content th, .content td { border: 1px solid #262720; padding: 8px 12px; text-align: left; vertical-align: top; }
-.content thead th { background: #1e1f19; font-weight: 600; }
+.content th, .content td { border: 1px solid ${P.border}; padding: 8px 12px; text-align: left; vertical-align: top; }
+.content thead th { background: ${P.rowAlt}; font-weight: 600; }
 .content img { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; }
-.content .empty { color: #66685f; }
-details.reasoning { margin-top: 12px; border: 1px solid #262720; border-radius: 8px; background: #15160f; padding: 8px 12px; }
-details.reasoning summary { cursor: pointer; font-weight: 600; font-size: 0.8rem; color: #75776d; }
-details.reasoning .reasoning-body { margin-top: 8px; font-size: 0.92rem; color: #9a9c95; }
-.export-footer { margin-top: 28px; text-align: center; color: #5c5e55; font-size: 0.78rem; }
+.content .empty { color: ${P.text6}; }
+details.reasoning { margin-top: 12px; border: 1px solid ${P.border}; border-radius: 8px; background: ${P.reasoningBg}; padding: 8px 12px; }
+details.reasoning summary { cursor: pointer; font-weight: 600; font-size: 0.8rem; color: ${P.text5}; }
+details.reasoning .reasoning-body { margin-top: 8px; font-size: 0.92rem; color: ${P.text3}; }
+.export-footer { margin-top: 28px; text-align: center; color: ${P.text7}; font-size: 0.78rem; }
 `;
 
 export const EXPORT_FORMATS: Record<ExportFormatKey, ExportFormat> = {

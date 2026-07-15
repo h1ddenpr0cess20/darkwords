@@ -40,6 +40,10 @@ export function currentPersonaSnapshot(
   };
 }
 
+export function defaultPersonaSnapshot(): PersonaSnapshot {
+  return { promptMode: 'personality', personalityName: DEFAULT_PERSONALITY_NAME, customPrompt: '', verbose: false };
+}
+
 /**
  * Restores a conversation's saved prompt-mode/persona settings — used when it
  * becomes active, mirroring `loadPartyForConversation`. A no-op when it never

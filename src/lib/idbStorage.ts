@@ -63,6 +63,10 @@ function flushWrite(name: string): Promise<void> {
   return run('readwrite', (store) => store.put(pending.value, name)).then(() => undefined);
 }
 
+export function flushAllWrites(): Promise<void> {
+  return Promise.all([...pendingWrites.keys()].map(flushWrite)).then(() => undefined);
+}
+
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {

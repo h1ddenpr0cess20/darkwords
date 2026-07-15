@@ -8,6 +8,8 @@
  * regular browser the bridge is absent and every helper here is inert.
  */
 
+import { APP_MODE } from './mode';
+
 /** Bridge exposed by `electron/preload.cjs` when running in the desktop app. */
 export interface DesktopBridge {
   platform: string;
@@ -25,7 +27,7 @@ declare global {
 export const TITLEBAR_HEIGHT = 36;
 
 /** The desktop window's fixed background, matching `--bg` in tokens.css. */
-export const TITLEBAR_BG = '#121210';
+export const TITLEBAR_BG = APP_MODE === 'light' ? '#f7f7f4' : '#121210';
 
 /** The preload bridge, or `undefined` in a plain browser. */
 export function desktopBridge(): DesktopBridge | undefined {

@@ -1,7 +1,7 @@
 import type { Conversation } from '../../types';
 import { makeId } from '../../lib/id';
 import { clearDocIndex } from '../../lib/rag/retrieval';
-import { emptyConversation, firstConversation, patchMessage, withConvo } from '../helpers';
+import { conversationOrderForMode, emptyConversation, firstConversation, patchMessage, withConvo } from '../helpers';
 import { endRunningParty, loadPartyForConversation } from './partySlice';
 import { currentPersonaSnapshot, loadPersonaForConversation } from './settingsSlice';
 import type { AppState, SliceCreator } from '../types';
@@ -90,12 +90,14 @@ export const createConversationsSlice: SliceCreator<ConversationsSlice> = (set, 
     const conversations = { ...s.conversations };
     delete conversations[id];
     let order = s.conversationOrder.filter((x) => x !== id);
-    if (order.length === 0) {
+    let inMode = conversationOrderForMode({ conversations, conversationOrder: order });
+    if (inMode.length === 0) {
       const c = emptyConversation();
       conversations[c.id] = c;
-      order = [c.id];
+      order = [c.id, ...order];
+      inMode = [c.id];
     }
-    const activeConvoId = wasActive ? order[0] : s.activeConvoId;
+    const activeConvoId = wasActive ? inMode[0] : s.activeConvoId;
 
     set({ ...party, conversations, conversationOrder: order, activeConvoId });
     if (wasActive) set(activateConversation(get().conversations[activeConvoId]));
@@ -119,6 +121,7 @@ export const createConversationsSlice: SliceCreator<ConversationsSlice> = (set, 
       messages: source.messages.slice(0, cut + 1).map((m) => ({ ...m, id: makeId('m') })),
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      mode: source.mode,
       personaSnapshot: source.personaSnapshot ?? currentPersonaSnapshot(s),
     };
 

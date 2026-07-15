@@ -2,10 +2,10 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { idbStorage } from '../lib/idbStorage';
 import type { GalleryItem } from '../types';
-import { firstConversation } from './helpers';
+import { conversationOrderForMode, emptyConversation, firstConversation } from './helpers';
 import type { AppState } from './types';
 import { createUiSlice } from './slices/uiSlice';
-import { createSettingsSlice, loadPersonaForConversation } from './slices/settingsSlice';
+import { createSettingsSlice, defaultPersonaSnapshot, loadPersonaForConversation } from './slices/settingsSlice';
 import { createTtsSlice } from './slices/ttsSlice';
 import { createLibrarySlice } from './slices/librarySlice';
 import { createDataSlice } from './slices/dataSlice';
@@ -105,10 +105,34 @@ export const useAppStore = create<AppState>()(
       },
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        const convo = state.conversations[state.activeConvoId];
+        const inMode = conversationOrderForMode(state);
+        let convoPatch: Partial<AppState> = {};
+        let activeId = state.activeConvoId;
+        let conversations = state.conversations;
+        if (!inMode.includes(activeId)) {
+          if (inMode.length > 0) {
+            activeId = inMode[0];
+            convoPatch = { activeConvoId: activeId };
+          } else {
+            const c = { ...emptyConversation(), personaSnapshot: defaultPersonaSnapshot() };
+            activeId = c.id;
+            conversations = { ...state.conversations, [c.id]: c };
+            convoPatch = {
+              conversations,
+              conversationOrder: [c.id, ...state.conversationOrder],
+              activeConvoId: c.id,
+            };
+          }
+        }
+        const active = conversations[activeId];
+        if (active && !active.personaSnapshot && !active.partyConfig && active.messages.length === 0) {
+          conversations = { ...conversations, [activeId]: { ...active, personaSnapshot: defaultPersonaSnapshot() } };
+          convoPatch = { ...convoPatch, conversations };
+        }
+        const convo = conversations[activeId];
         const resumed = loadPartyForConversation(convo);
         const persona = loadPersonaForConversation(convo);
-        const patch = { ...persona, ...resumed };
+        const patch = { ...convoPatch, ...persona, ...resumed };
         if (Object.keys(patch).length) useAppStore.setState(patch);
       },
     },

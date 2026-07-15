@@ -135,14 +135,15 @@ export async function indexAttachments(
 ): Promise<{ indexed: number; chunks: number; failed: string[] }> {
   const idx = getIndex(convoId);
   const pending: { name: string; text: string }[] = [];
+  const embedded: string[] = [];
   const failed: string[] = [];
   let indexed = 0;
 
   for (const att of attachments) {
     if (idx.seen.has(att.id) || !isIndexableAttachment(att)) continue;
-    idx.seen.add(att.id);
     const file = attachmentToFile(att);
     if (!file) {
+      idx.seen.add(att.id);
       failed.push(att.name);
       continue;
     }
@@ -150,13 +151,15 @@ export async function indexAttachments(
       const text = await extractDocumentText(file);
       const chunks = text.trim() ? chunkText(text) : [];
       if (!chunks.length) {
+        idx.seen.add(att.id);
         failed.push(att.name);
         continue;
       }
-      idx.chunks = idx.chunks.filter((c) => c.name !== att.name);
       for (const chunk of chunks) pending.push({ name: att.name, text: chunk });
+      embedded.push(att.id);
       indexed++;
     } catch {
+      idx.seen.add(att.id);
       failed.push(att.name);
     }
   }
@@ -168,9 +171,12 @@ export async function indexAttachments(
       target.model,
       signal,
     );
+    const names = new Set(pending.map((p) => p.name));
+    idx.chunks = idx.chunks.filter((c) => !names.has(c.name));
     for (let i = 0; i < pending.length; i++) {
       idx.chunks.push({ name: pending[i].name, text: pending[i].text, vector: vectors[i], model: target.model });
     }
+    for (const id of embedded) idx.seen.add(id);
   }
 
   return { indexed, chunks: pending.length, failed };

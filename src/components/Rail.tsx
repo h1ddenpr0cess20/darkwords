@@ -2,7 +2,13 @@ import { useEffect, useRef, type CSSProperties } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { resolveModel } from '../lib/models';
 import { useAccent } from '../lib/theme';
+import type { Provider } from '../types';
 import styles from './Rail.module.css';
+
+const PROVIDERS: { key: Provider; label: string }[] = [
+  { key: 'anthropic', label: 'Anthropic' },
+  { key: 'lmstudio', label: 'LM Studio' },
+];
 
 function ChatIcon() {
   return (
@@ -86,8 +92,12 @@ export function Rail() {
   const toggleModelPicker = useAppStore((s) => s.toggleModelPicker);
   const selectModel = useAppStore((s) => s.selectModel);
   const provider = useAppStore((s) => s.provider);
+  const setProvider = useAppStore((s) => s.setProvider);
   const anthropicModels = useAppStore((s) => s.anthropicModels);
   const lmStudioModels = useAppStore((s) => s.lmStudioModels);
+  const modelsLoading = useAppStore((s) => s.modelsLoading);
+  const modelsError = useAppStore((s) => s.modelsError);
+  const refreshModels = useAppStore((s) => s.refreshModels);
   const selectedModelId = useAppStore((s) => (s.provider === 'lmstudio' ? s.lmStudioModelId : s.selectedModelId));
 
   const models = provider === 'lmstudio' ? lmStudioModels : anthropicModels;
@@ -95,6 +105,18 @@ export function Rail() {
   const cssVars = { '--accent': accent, '--accent-bg': accentBg } as CSSProperties;
 
   const modelWrapRef = useRef<HTMLDivElement>(null);
+  const fetchedForOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (!modelPickerOpen) {
+      fetchedForOpenRef.current = false;
+      return;
+    }
+    if (!fetchedForOpenRef.current && provider === 'lmstudio' && lmStudioModels.length === 0 && !modelsLoading) {
+      fetchedForOpenRef.current = true;
+      void refreshModels();
+    }
+  }, [modelPickerOpen, provider, lmStudioModels.length, modelsLoading, refreshModels]);
 
   useEffect(() => {
     if (!modelPickerOpen) return;
@@ -158,10 +180,28 @@ export function Rail() {
         </button>
         {modelPickerOpen && (
           <div className={styles.modelDropdown}>
+            <div className={styles.modelDropdownLabel}>SERVICE</div>
+            <div className={styles.serviceSwitch}>
+              {PROVIDERS.map((p) => (
+                <button
+                  key={p.key}
+                  className={`${styles.serviceBtn} ${provider === p.key ? styles.serviceBtnOn : ''}`}
+                  onClick={() => setProvider(p.key)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
             <div className={styles.modelDropdownLabel}>MODEL</div>
             {models.length === 0 && (
               <div className={styles.modelDropdownLabel} style={{ padding: '6px 10px' }}>
-                No models loaded — open Settings → Model
+                {provider === 'lmstudio' && modelsLoading
+                  ? 'Loading models…'
+                  : provider === 'lmstudio' && modelsError
+                    ? modelsError
+                    : provider === 'lmstudio'
+                      ? 'No models found — is LM Studio running?'
+                      : 'No models loaded — open Settings → Model'}
               </div>
             )}
             {models.map((mo) => (

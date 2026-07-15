@@ -149,7 +149,7 @@
   margin-top: 8px;
   font-size: 11.5px;
   line-height: 1.45;
-  color: #e8b54d;
+  color: var(--accent-ember);
 }
 
 .switch {
@@ -369,7 +369,7 @@
 }
 
 .characterRemove:hover {
-  color: #e88484;
+  color: var(--persona-orin);
 }
 
 .characterPersona {
@@ -488,13 +488,13 @@
   cursor: pointer;
   font-family: inherit;
   background: none;
-  border: 1px solid #e8848455;
-  color: #e88484;
+  border: 1px solid color-mix(in srgb, var(--persona-orin) 33%, transparent);
+  color: var(--persona-orin);
   transition: background 0.12s;
 }
 
 .dangerBtn:hover {
-  background: #e8848418;
+  background: color-mix(in srgb, var(--persona-orin) 9%, transparent);
 }
 
 .link {

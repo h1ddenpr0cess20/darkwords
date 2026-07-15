@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { Children, isValidElement, memo, type ReactNode } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CodeBlock } from './CodeBlock';
@@ -7,21 +7,17 @@ import styles from './Markdown.module.css';
 const remarkPlugins = [remarkGfm];
 
 const components: Components = {
-  code({ className, children, ...props }) {
-    const source = String(children).replace(/\n$/, '');
-    const language = /language-(\w+)/.exec(className ?? '')?.[1];
-
-    const isBlock = Boolean(language) || source.includes('\n');
-    if (!isBlock) {
-      return (
-        <code className={styles.inlineCode} {...props}>
-          {children}
-        </code>
-      );
+  code: ({ children }) => <code className={styles.inlineCode}>{children}</code>,
+  pre: ({ children }) => {
+    const child = Children.toArray(children)[0];
+    if (isValidElement(child)) {
+      const props = child.props as { className?: string; children?: ReactNode };
+      const source = String(props.children ?? '').replace(/\n$/, '');
+      const language = /language-(\w+)/.exec(props.className ?? '')?.[1];
+      return <CodeBlock code={source} language={language} />;
     }
-    return <CodeBlock code={source} language={language} />;
+    return <pre>{children}</pre>;
   },
-  pre: ({ children }) => <>{children}</>,
   a: ({ children, ...props }) => (
     <a {...props} target="_blank" rel="noreferrer noopener" className={styles.link}>
       {children}

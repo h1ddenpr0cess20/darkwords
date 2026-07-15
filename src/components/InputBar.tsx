@@ -1,7 +1,8 @@
-import { useEffect, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { makeId } from '../lib/id';
 import { blobToDataUrl } from '../lib/dataUrl';
+import { groupAttachmentsByFolder } from '../lib/attachmentGroups';
 import { PartyBar } from './PartyBar';
 import styles from './InputBar.module.css';
 
@@ -20,7 +21,7 @@ async function readFileAsAttachment(
 ): Promise<{ id: string; name: string; mimeType: string; size: number; dataUrl: string }> {
   return {
     id: makeId('att'),
-    name: file.name,
+    name: file.webkitRelativePath || file.name,
     mimeType: file.type || 'application/octet-stream',
     size: file.size,
     dataUrl: await blobToDataUrl(file),
@@ -33,12 +34,25 @@ export function InputBar() {
   const uploads = useAppStore((s) => s.pendingUploads);
   const addUpload = useAppStore((s) => s.addUpload);
   const removeUpload = useAppStore((s) => s.removeUpload);
+  const clearUploads = useAppStore((s) => s.clearUploads);
   const isSending = useAppStore((s) => s.isSending);
   const sendMessage = useAppStore((s) => s.sendMessage);
   const stopStreaming = useAppStore((s) => s.stopStreaming);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dirInputRef = useRef<HTMLInputElement>(null);
+  const attachRef = useRef<HTMLDivElement>(null);
+  const [attachOpen, setAttachOpen] = useState(false);
+
+  useEffect(() => {
+    if (!attachOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (attachRef.current && !attachRef.current.contains(e.target as Node)) setAttachOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [attachOpen]);
 
   /**
    * Runs on every input change, including when sending clears the draft, so
@@ -64,6 +78,8 @@ export function InputBar() {
     }
   };
 
+  const uploadGroups = groupAttachmentsByFolder(uploads);
+
   const onFilesSelected = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     e.target.value = '';
@@ -79,10 +95,20 @@ export function InputBar() {
         <PartyBar />
         {uploads.length > 0 && (
           <div className={styles.uploads}>
-            {uploads.map((u) => (
-              <div key={u.id} className={styles.uploadChip}>
-                <span className={styles.uploadName}>{u.name}</span>
-                <button className={styles.uploadRemove} onClick={() => removeUpload(u.id)}>
+            {uploads.length > 1 && (
+              <button className={styles.uploadClear} onClick={clearUploads}>
+                Clear all
+              </button>
+            )}
+            {uploadGroups.map((g) => (
+              <div key={g.key} className={styles.uploadChip}>
+                <span className={styles.uploadName}>{g.folder ? `${g.folder} (${g.count})` : g.label}</span>
+                <button
+                  className={styles.uploadRemove}
+                  onClick={() => {
+                    for (const id of g.ids) removeUpload(id);
+                  }}
+                >
                   ✕
                 </button>
               </div>
@@ -91,20 +117,56 @@ export function InputBar() {
         )}
         <div className={styles.bar}>
           <input ref={fileInputRef} type="file" multiple hidden onChange={onFilesSelected} />
-          <button className={styles.attachBtn} title="Attach file" onClick={() => fileInputRef.current?.click()}>
-            <svg
-              width="17"
-              height="17"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <input
+            ref={dirInputRef}
+            type="file"
+            multiple
+            hidden
+            onChange={onFilesSelected}
+            {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
+          />
+          <div className={styles.attachWrap} ref={attachRef}>
+            <button
+              className={styles.attachBtn}
+              title="Attach files or a folder"
+              onClick={() => setAttachOpen((v) => !v)}
             >
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
-            </svg>
-          </button>
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+              </svg>
+            </button>
+            {attachOpen && (
+              <div className={styles.attachMenu}>
+                <button
+                  className={styles.attachMenuItem}
+                  onClick={() => {
+                    setAttachOpen(false);
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  Attach files
+                </button>
+                <button
+                  className={styles.attachMenuItem}
+                  onClick={() => {
+                    setAttachOpen(false);
+                    dirInputRef.current?.click();
+                  }}
+                >
+                  Attach folder
+                </button>
+              </div>
+            )}
+          </div>
           <textarea
             ref={textareaRef}
             className={styles.textarea}

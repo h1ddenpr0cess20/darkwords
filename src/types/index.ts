@@ -1,3 +1,4 @@
+import type { AppMode } from '../lib/mode';
 import type { PartyConfig } from '../lib/party/types';
 
 export type Role = 'user' | 'assistant';
@@ -107,6 +108,7 @@ export interface Conversation {
   messages: ChatMessage[];
   createdAt: number;
   updatedAt: number;
+  mode?: AppMode;
   /** The cast/scenario last active in this conversation, kept so a party can be resumed after a reload or a conversation switch. */
   partyConfig?: PartyConfig;
   /** Superseded by `partyConfig` when both are present (see loadPersonaForConversation). */

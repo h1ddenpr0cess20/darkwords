@@ -23,7 +23,7 @@
 }
 
 .dot[data-status="paused"] {
-  background: #e8b54d;
+  background: var(--accent-ember);
 }
 
 .dot[data-status="stopped"] {

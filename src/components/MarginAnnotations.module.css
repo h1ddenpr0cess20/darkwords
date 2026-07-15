@@ -152,5 +152,5 @@
 }
 
 .toolError {
-  color: #e88484;
+  color: var(--persona-orin);
 }

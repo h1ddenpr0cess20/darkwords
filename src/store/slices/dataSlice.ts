@@ -1,7 +1,7 @@
 import type { Conversation, GalleryItem, McpServer, Memory, Skill } from '../../types';
 import { partyEngine } from '../../lib/party/engine';
 import { ttsPlayback } from '../../lib/ttsPlayback';
-import { emptyConversation } from '../helpers';
+import { conversationOrderForMode, emptyConversation } from '../helpers';
 import type { SliceCreator } from '../types';
 
 /** Backup and restore for the Data panel. */
@@ -60,15 +60,23 @@ export const createDataSlice: SliceCreator<DataSlice> = (set, get) => ({
       const conversations = data.conversations as Record<string, Conversation> | undefined;
       if (!conversations || typeof conversations !== 'object') return false;
 
-      const order = Array.isArray(data.conversationOrder)
+      let order = Array.isArray(data.conversationOrder)
         ? (data.conversationOrder as string[]).filter((id) => conversations[id])
         : Object.keys(conversations);
       if (!order.length) return false;
 
+      let inMode = conversationOrderForMode({ conversations, conversationOrder: order });
+      if (inMode.length === 0) {
+        const c = emptyConversation();
+        conversations[c.id] = c;
+        order = [c.id, ...order];
+        inMode = [c.id];
+      }
+
       set({
         conversations,
         conversationOrder: order,
-        activeConvoId: order[0],
+        activeConvoId: inMode[0],
         galleryItems: Array.isArray(data.galleryItems) ? (data.galleryItems as GalleryItem[]) : [],
         memories: Array.isArray(data.memories) ? (data.memories as Memory[]) : [],
         skills: Array.isArray(data.skills) ? (data.skills as Skill[]) : [],

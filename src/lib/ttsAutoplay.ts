@@ -23,7 +23,7 @@ export function autoplayFinalizedMessage(s: AppState, cid: string, msgId: string
   if (!s.ttsEnabled || !s.ttsAutoplay || !s.imageApiKey) return;
 
   const msg = s.conversations[cid]?.messages.find((m) => m.id === msgId);
-  if (!msg || msg.role !== 'assistant' || !isSpeakable(msg.rawText)) return;
+  if (msg?.role !== 'assistant' || !isSpeakable(msg.rawText)) return;
 
   ttsPlayback.enqueue(msgId, {
     apiKey: s.imageApiKey,

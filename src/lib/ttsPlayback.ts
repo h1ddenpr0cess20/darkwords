@@ -77,7 +77,9 @@ class TtsController {
 
   private setState(id: string, next: TtsState): void {
     this.states.set(id, next);
-    this.listeners.get(id)?.forEach((l) => l());
+    this.listeners.get(id)?.forEach((l) => {
+      l();
+    });
   }
 
   /** Toggles playback for a message: synthesize + play, pause, or resume. */

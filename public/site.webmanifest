@@ -1,7 +1,7 @@
 {
   "name": "Darkwords",
   "short_name": "Darkwords",
-  "description": "A dark, editorial chat client for the Anthropic API and local models",
+  "description": "A client-side AI chat app for the Anthropic API and local models",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#121210",

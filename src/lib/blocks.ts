@@ -28,7 +28,7 @@ function cleanInline(text: string): string {
 /**
  * Converts raw markdown-ish assistant text into the paragraph/heading/list/code
  * block model the feed renders. Deliberately lightweight — no inline styling,
- * matching the editorial plain-text look of the source design.
+ * matching the compact plain-text look of the source design.
  */
 export function parseBlocks(raw: string): ContentPart[] {
   const parts: ContentPart[] = [];

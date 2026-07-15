@@ -1,8 +1,8 @@
 # Darkwords Documentation
 
 Welcome to the Darkwords docs. This folder holds accurate, code-backed notes on
-how the app works, how to run it, and how to extend it. Darkwords is a dark,
-editorial React chat client for the Anthropic API and local models — a port of
+how the app works, how to run it, and how to extend it. Darkwords is a
+client-side React chat app for the Anthropic API and local models — a port of
 [Wordmark](https://github.com/h1ddenpr0cess20/Wordmark)'s feature set onto
 Claude with a new UI.
 

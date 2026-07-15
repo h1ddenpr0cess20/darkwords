@@ -1,4 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/anthropic/:path*", "destination": "https://api.anthropic.com/:path*" },
+    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+  ]
 }

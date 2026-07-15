@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { memo, type CSSProperties } from 'react';
 import type { ChatMessage } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { useAccent } from '../lib/theme';
@@ -26,7 +26,7 @@ function FileIcon() {
   );
 }
 
-export function MessageRow({ message }: { message: ChatMessage }) {
+export const MessageRow = memo(function MessageRow({ message }: { message: ChatMessage }) {
   const { accent, accentBg } = useAccent();
   const openLightbox = useAppStore((s) => s.openLightbox);
   const isUser = message.role === 'user';
@@ -147,4 +147,4 @@ export function MessageRow({ message }: { message: ChatMessage }) {
       <MarginAnnotations message={message} />
     </div>
   );
-}
+});

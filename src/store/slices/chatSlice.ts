@@ -94,6 +94,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
           generatedFiles: undefined,
           error: undefined,
           streaming: true,
+          reasoning: false,
         })),
       ),
     );
@@ -144,7 +145,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
               generatedFiles: m.generatedFiles,
             };
             const variants = [...(m.variants ?? []), fresh];
-            return { streaming: false, parts, variants, variantIndex: variants.length - 1 };
+            return { streaming: false, reasoning: false, parts, variants, variantIndex: variants.length - 1 };
           }),
         ),
       );
@@ -287,6 +288,7 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
           withConvo(s, cid, (c) =>
             patchMessage(c, assistantId, (m) => ({
               streaming: false,
+              reasoning: false,
               parts: m.rawText
                 ? parseBlocks(m.rawText)
                 : m.error

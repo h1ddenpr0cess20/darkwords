@@ -4,6 +4,7 @@ import { ToolsTab } from './tabs/ToolsTab';
 import { PersonalityTab } from './tabs/PersonalityTab';
 import { VoiceTab } from './tabs/VoiceTab';
 import { ThemeTab } from './tabs/ThemeTab';
+import { LocationTab } from './tabs/LocationTab';
 import { KeysTab } from './tabs/KeysTab';
 import { AboutTab } from './tabs/AboutTab';
 import { MemoryPanel } from './MemoryPanel';
@@ -21,6 +22,7 @@ const TABS: { key: SettingsTab; label: string }[] = [
   { key: 'skills', label: 'Skills' },
   { key: 'voice', label: 'Voice' },
   { key: 'theme', label: 'Theme' },
+  { key: 'location', label: 'Location' },
   { key: 'apikeys', label: 'Keys' },
   { key: 'data', label: 'Data' },
   { key: 'about', label: 'About' },
@@ -57,6 +59,7 @@ export function SettingsPanel() {
         {panelTab === 'skills' && <SkillsPanel />}
         {panelTab === 'voice' && <VoiceTab />}
         {panelTab === 'theme' && <ThemeTab />}
+        {panelTab === 'location' && <LocationTab />}
         {panelTab === 'apikeys' && <KeysTab />}
         {panelTab === 'data' && <DataPanel />}
         {panelTab === 'about' && <AboutTab />}

@@ -114,7 +114,7 @@ export function MessageActions({ message }: { message: ChatMessage }) {
         </button>
       )}
 
-      {!inParty && (
+      {isAssistant && !inParty && (
         <button className={styles.btn} onClick={() => branch(message.id)} title="Branch a new conversation here">
           <BranchIcon />
         </button>

@@ -81,6 +81,7 @@ export interface ChatMessage {
   rawText: string;
   thinking?: string;
   thinkingOpen?: boolean;
+  reasoning?: boolean;
   tools?: ToolCallInfo[];
   imageGen?: ImageGenInfo[];
   /** Files the assistant's code execution wrote out, available to download. */
@@ -192,6 +193,7 @@ export type SettingsTab =
   | 'skills'
   | 'voice'
   | 'theme'
+  | 'location'
   | 'apikeys'
   | 'data'
   | 'about';

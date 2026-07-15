@@ -1,0 +1,122 @@
+.root {
+  position: relative;
+  align-self: center;
+}
+
+.trigger {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-4);
+  background: transparent;
+  transition: color 0.12s;
+}
+
+.trigger:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.trigger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  animation: dw-fade 0.15s ease;
+}
+
+.menuLabel {
+  font-size: 10.5px;
+  color: var(--text-6);
+  font-family: var(--font-mono);
+  padding: 6px 8px 4px;
+}
+
+.formats {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.formatOption {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 9px;
+  color: var(--text-0);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.formatOption.selected {
+  background: var(--accent-bg);
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  cursor: pointer;
+  padding: 8px 9px;
+}
+
+.checkRow input {
+  accent-color: var(--accent);
+}
+
+.exportBtn {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #0a0a0a;
+  border-radius: 8px;
+  padding: 9px 10px;
+  margin-top: 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.exportBtn:hover {
+  opacity: 0.85;
+}
+
+.status {
+  font-size: 11.5px;
+  color: var(--text-5);
+  text-align: center;
+}
+
+@keyframes dw-fade {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

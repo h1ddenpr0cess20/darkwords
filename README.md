@@ -2,7 +2,7 @@
 
 # Darkwords
 
-A dark, editorial chat client for the Anthropic API and local models — a port of
+A client-side AI chat app for the Anthropic API and local models — a port of
 [Wordmark](https://github.com/h1ddenpr0cess20/Wordmark)'s feature set onto
 Claude, with a new UI. Icon rail, manuscript-style feed with reasoning and tool
 calls as margin annotations, a floating input bar, and a left-hand drawer for

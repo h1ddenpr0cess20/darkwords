@@ -5,7 +5,7 @@ export function AboutTab() {
     <div className={styles.section}>
       <div className={styles.sectionLabel}>DARKWORDS</div>
       <p className={styles.info}>
-        A dark, editorial chat client for the Anthropic API and local models — a port of{' '}
+        A client-side AI chat app for the Anthropic API and local models — a port of{' '}
         <a
           href="https://github.com/h1ddenpr0cess20/Wordmark"
           target="_blank"

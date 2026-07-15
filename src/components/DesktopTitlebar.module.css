@@ -1,0 +1,32 @@
+.titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  /* Leave room for the native window-control overlay (Windows/Linux). */
+  padding-left: clamp(14px, calc(env(titlebar-area-x, 0px) + 14px), 110px);
+  padding-right: clamp(14px, calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 14px), 190px);
+  background: var(--bg);
+  color: var(--text-3);
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  z-index: 1000;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+.titlebar svg {
+  flex: none;
+}
+
+.titlebar span {
+  white-space: nowrap;
+}

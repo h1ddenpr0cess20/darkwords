@@ -1,6 +1,6 @@
 # Theming & UI
 
-Darkwords has a dark, editorial layout: an icon rail, a manuscript-style feed
+Darkwords uses an icon-rail layout: a manuscript-style feed
 with reasoning and tool calls as margin annotations, a floating input bar, and a
 left-hand drawer.
 

@@ -1,9 +1,9 @@
 {
   "name": "darkwords",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
-  "description": "A dark, editorial chat client for the Anthropic API and local models",
+  "description": "A client-side AI chat app for the Anthropic API and local models",
   "author": "Dustin Whyte",
   "repository": {
     "type": "git",
@@ -28,7 +28,14 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit && biome check .",
     "test": "vitest run",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "electron": "npm run build && electron electron/main.cjs",
+    "electron:run": "electron electron/main.cjs",
+    "electron:pack": "npm run build && electron-builder --dir",
+    "electron:dist": "npm run build && electron-builder",
+    "electron:dist:linux": "npm run build && electron-builder --linux AppImage --x64",
+    "electron:dist:win": "npm run build && electron-builder --win nsis --x64",
+    "electron:dist:release": "npm run build && electron-builder --linux AppImage --x64 && electron-builder --win nsis --x64"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
@@ -43,8 +50,48 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "electron": "43.1.1",
+    "electron-builder": "^26.15.3",
     "typescript": "^7.0.2",
     "vite": "^8.1.4",
     "vitest": "^4.1.10"
+  },
+  "build": {
+    "appId": "com.h1ddenpr0cess20.darkwords",
+    "productName": "Darkwords",
+    "extraMetadata": {
+      "main": "electron/main.cjs"
+    },
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/main.cjs",
+      "electron/preload.cjs",
+      "electron/icon.png",
+      "dist/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "electron/icon.png"
+    },
+    "linux": {
+      "category": "Utility",
+      "target": [
+        "AppImage"
+      ],
+      "icon": "electron/icon.png"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "electron/icon.png"
+    }
   }
 }

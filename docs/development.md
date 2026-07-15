@@ -10,6 +10,8 @@
 | `npm run lint` | `tsc --noEmit` + `biome check .` |
 | `npm test` | `vitest run` |
 | `npm run format` | `biome format --write .` |
+| `npm run electron` | Build and launch the Electron app |
+| `npm run electron:dist:release` | Build Linux AppImage and Windows NSIS release artifacts |
 
 ## Tooling
 

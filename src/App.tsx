@@ -16,7 +16,10 @@ export function App() {
   const vars = {
     '--accent': accent,
     '--accent-bg': accentBg,
-    ...(desktop && { paddingTop: TITLEBAR_HEIGHT }),
+    ...(desktop && {
+      '--titlebar-height': `${TITLEBAR_HEIGHT}px`,
+      paddingTop: TITLEBAR_HEIGHT,
+    }),
   } as CSSProperties;
 
   return (

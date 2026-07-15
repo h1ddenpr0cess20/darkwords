@@ -21,6 +21,7 @@ Claude with a new UI.
 - [Storage](storage.md) — what's persisted, and where
 - [Theming & UI](theming.md) — accent themes, layout, responsive behavior
 - [Deployment](deployment.md) — Docker, Vercel, and the keys-in-browser caveat
+- [Desktop app](electron.md) — Electron development, packaging, and releases
 - [Development Guide](development.md) — scripts, structure, conventions
 - [Security](security.md) — the client-side-keys trust model
 - [Troubleshooting](troubleshooting.md) — common problems and fixes

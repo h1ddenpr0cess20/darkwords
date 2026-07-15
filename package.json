@@ -1,7 +1,7 @@
 {
   "name": "darkwords",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "A dark, editorial chat client for the Anthropic API and local models",
   "author": "Dustin Whyte",
@@ -32,7 +32,10 @@
     "electron": "npm run build && electron electron/main.cjs",
     "electron:run": "electron electron/main.cjs",
     "electron:pack": "npm run build && electron-builder --dir",
-    "electron:dist": "npm run build && electron-builder"
+    "electron:dist": "npm run build && electron-builder",
+    "electron:dist:linux": "npm run build && electron-builder --linux AppImage --x64",
+    "electron:dist:win": "npm run build && electron-builder --win nsis --x64",
+    "electron:dist:release": "npm run build && electron-builder --linux AppImage --x64 && electron-builder --win nsis --x64"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",

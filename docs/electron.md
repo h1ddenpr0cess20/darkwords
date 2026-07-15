@@ -57,5 +57,42 @@ Produces a `dmg`/`zip` on macOS, an `AppImage` on Linux, and an `nsis`
 installer on Windows, per the `build` config in `package.json`. Use
 `npm run electron:pack` for an unpacked directory instead of an installer.
 
+The release-specific commands make the target explicit:
+
+```bash
+npm run electron:dist:linux    # Linux x64 AppImage
+npm run electron:dist:win      # Windows x64 NSIS .exe
+npm run electron:dist:release  # both artifacts, building the web app once
+```
+
+Cross-building the Windows installer on Linux requires Wine. The combined
+release command is intended for the Linux release host and writes both files to
+`release/`:
+
+- `Darkwords-<version>.AppImage`
+- `Darkwords Setup <version>.exe`
+
+## Release routine
+
+Every GitHub release should include both desktop artifacts. After the changes
+for a release are merged:
+
+```bash
+npm test
+npm run lint
+npm version <version> --no-git-tag-version
+git add package.json package-lock.json
+git commit -m "Release <version>"
+npm run electron:dist:release
+gh release create v<version> \
+  "release/Darkwords-<version>.AppImage" \
+  "release/Darkwords Setup <version>.exe" \
+  --title "Darkwords <version>" \
+  --generate-notes
+```
+
+Creating the `v<version>` GitHub release also creates the tag that triggers the
+existing Docker publishing workflow.
+
 Electron is pinned to an exact version (`43.1.1`) so desktop builds are
 reproducible.

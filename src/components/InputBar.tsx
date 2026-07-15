@@ -1,6 +1,5 @@
 import { useEffect, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useAppStore } from '../store/useAppStore';
-import { useAccent } from '../lib/theme';
 import { makeId } from '../lib/id';
 import { blobToDataUrl } from '../lib/dataUrl';
 import { PartyBar } from './PartyBar';
@@ -29,7 +28,6 @@ async function readFileAsAttachment(
 }
 
 export function InputBar() {
-  const { accent } = useAccent();
   const input = useAppStore((s) => s.input);
   const setInput = useAppStore((s) => s.setInput);
   const uploads = useAppStore((s) => s.pendingUploads);
@@ -117,7 +115,7 @@ export function InputBar() {
             rows={1}
           />
           {isSending ? (
-            <button className={styles.sendBtn} title="Stop" onClick={stopStreaming} style={{ background: accent }}>
+            <button className={styles.sendBtn} title="Stop" onClick={stopStreaming}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
                 <rect x="5" y="5" width="14" height="14" rx="2" />
               </svg>
@@ -128,11 +126,10 @@ export function InputBar() {
               title="Send"
               disabled={!input.trim() && uploads.length === 0}
               onClick={() => void sendMessage()}
-              style={{ background: accent }}
             >
               <svg
-                width="15"
-                height="15"
+                width="17"
+                height="17"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -140,8 +137,8 @@ export function InputBar() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M22 2L11 13" />
-                <path d="M22 2l-7 20-4-9-9-4z" />
+                <path d="M3.714 3.048a.498.498 0 0 0-.683.627l2.843 7.627a2 2 0 0 1 0 1.396l-2.842 7.627a.498.498 0 0 0 .682.627l18-8.5a.5.5 0 0 0 0-.904z" />
+                <path d="M6 12h16" />
               </svg>
             </button>
           )}

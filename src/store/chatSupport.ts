@@ -1,6 +1,7 @@
 import type { Attachment, McpServer, ModelDef, ToolsEnabled } from '../types';
 import { makeId } from '../lib/id';
 import { buildSystemPrompt } from '../lib/prompt';
+import { locationPromptFragment } from '../lib/location';
 import { resolveModel } from '../lib/models';
 import { resolveEmbeddingModel } from '../lib/rag/embeddings';
 import { buildRetrievedContext, indexAttachments, isIndexableAttachment } from '../lib/rag/retrieval';
@@ -98,7 +99,8 @@ export function composeSystemPrompt(s: AppState): string {
     verbose: s.verbose,
   });
   const memories = s.memoryEnabled ? memoryContext(s.memories) : '';
-  return `${base}${memories}${skillsContext(s.skills)}`;
+  const location = locationPromptFragment(s.locationEnabled, s.locationString);
+  return `${base}${memories}${skillsContext(s.skills)}${location}`;
 }
 
 /**
@@ -168,7 +170,9 @@ export function streamCallbacks(cid: string, messageId: string) {
   return {
     onThinkingDelta: (delta: string) => {
       set((s) =>
-        withConvo(s, cid, (c) => patchMessage(c, messageId, (m) => ({ thinking: (m.thinking ?? '') + delta }))),
+        withConvo(s, cid, (c) =>
+          patchMessage(c, messageId, (m) => ({ thinking: (m.thinking ?? '') + delta, reasoning: true })),
+        ),
       );
     },
     onTextDelta: (delta: string) => {
@@ -176,7 +180,7 @@ export function streamCallbacks(cid: string, messageId: string) {
         withConvo(s, cid, (c) =>
           patchMessage(c, messageId, (m) => {
             const rawText = m.rawText + delta;
-            return { rawText, parts: [{ type: 'para' as const, text: rawText }] };
+            return { rawText, parts: [{ type: 'para' as const, text: rawText }], reasoning: false };
           }),
         ),
       );

@@ -27,6 +27,11 @@
   cursor: pointer;
   color: var(--text-4);
   background: transparent;
+  transition: color 0.12s;
+}
+
+.iconBtn:hover:not(.active) {
+  color: var(--accent);
 }
 
 .iconBtn.active {

@@ -77,6 +77,11 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: color 0.12s;
+}
+
+.attachBtn:hover {
+  color: var(--accent);
 }
 
 .textarea {
@@ -102,13 +107,18 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--accent);
+  background: transparent;
   border: none;
-  color: #0f100d;
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.sendBtn:hover:not(:disabled) {
+  opacity: 0.75;
 }
 
 .sendBtn:disabled {

@@ -15,6 +15,7 @@ export function MarginAnnotations({ message }: { message: ChatMessage }) {
   if (!hasTrace) return null;
 
   const label = message.thinking ? 'reasoning' : 'tool calls';
+  const reasoning = Boolean(message.reasoning);
 
   return (
     <div className={styles.margin}>
@@ -22,7 +23,11 @@ export function MarginAnnotations({ message }: { message: ChatMessage }) {
         <div className={styles.thinking}>
           <button className={styles.thinkingToggle} onClick={() => toggleThinking(message.id)}>
             <span className={styles.thinkingLabel}>{label}</span>
-            {tools.length > 0 && <span className={styles.toolCount}>{tools.length}</span>}
+            {reasoning ? (
+              <span className={styles.spinner} />
+            ) : (
+              tools.length > 0 && <span className={styles.toolCount}>{tools.length}</span>
+            )}
             <svg
               width="9"
               height="9"

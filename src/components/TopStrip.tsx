@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useAppStore } from '../store/useAppStore';
+import { ExportMenu } from './ExportMenu';
 import styles from './TopStrip.module.css';
 
 /**
@@ -22,6 +23,8 @@ export function TopStrip() {
         {turns} {turns === 1 ? 'turn' : 'turns'}
       </span>
       <div className={styles.spacer} />
+
+      <ExportMenu />
 
       {party && (
         <div className={styles.chips}>

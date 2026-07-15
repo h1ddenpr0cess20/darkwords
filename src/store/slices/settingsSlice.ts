@@ -10,6 +10,8 @@ import type {
   ToolsEnabled,
 } from '../../types';
 import { DEFAULT_PERSONALITY_NAME } from '../../lib/prompt';
+import { requestLocation } from '../../lib/location';
+import type { ExportFormatKey } from '../../lib/conversationExport';
 import {
   ANTHROPIC_MODELS,
   DEFAULT_ANTHROPIC_MODEL,
@@ -85,6 +87,16 @@ export interface SettingsSlice {
   customPrompt: string;
   verbose: boolean;
 
+  /** Injects the user's approximate location into the system prompt when on. */
+  locationEnabled: boolean;
+  locationString: string;
+  locationError: string | null;
+  locationLoading: boolean;
+
+  /** Remembered picks for the conversation-export menu. */
+  exportFormat: ExportFormatKey;
+  exportIncludeThinking: boolean;
+
   setProvider: (provider: Provider) => void;
   setLmStudioUrl: (url: string) => void;
   setEmbeddingModelId: (id: string) => void;
@@ -107,6 +119,12 @@ export interface SettingsSlice {
   setCustomPrompt: (text: string) => void;
   toggleVerbose: () => void;
   resetPersonality: () => void;
+
+  /** Turns location on and resolves a fresh fix; clears it back off on failure. */
+  enableLocation: () => Promise<void>;
+  disableLocation: () => void;
+  setExportFormat: (format: ExportFormatKey) => void;
+  setExportIncludeThinking: (include: boolean) => void;
 }
 
 export const createSettingsSlice: SliceCreator<SettingsSlice> = (set, get) => ({
@@ -132,6 +150,14 @@ export const createSettingsSlice: SliceCreator<SettingsSlice> = (set, get) => ({
   personalityName: DEFAULT_PERSONALITY_NAME,
   customPrompt: '',
   verbose: false,
+
+  locationEnabled: false,
+  locationString: '',
+  locationError: null,
+  locationLoading: false,
+
+  exportFormat: 'md',
+  exportIncludeThinking: false,
 
   setProvider: (provider) => {
     set({ provider, modelsError: null });
@@ -184,4 +210,23 @@ export const createSettingsSlice: SliceCreator<SettingsSlice> = (set, get) => ({
       verbose: false,
       ...snapshotPersonaPatch(s, { personalityName: DEFAULT_PERSONALITY_NAME, verbose: false }),
     })),
+
+  enableLocation: async () => {
+    set({ locationLoading: true, locationError: null });
+    const result = await requestLocation();
+    if (result.ok) {
+      set({
+        locationEnabled: true,
+        locationString: result.fix.locationString,
+        locationError: null,
+        locationLoading: false,
+      });
+    } else {
+      set({ locationEnabled: false, locationString: '', locationError: result.error, locationLoading: false });
+    }
+  },
+  disableLocation: () =>
+    set({ locationEnabled: false, locationString: '', locationError: null, locationLoading: false }),
+  setExportFormat: (format) => set({ exportFormat: format }),
+  setExportIncludeThinking: (include) => set({ exportIncludeThinking: include }),
 });

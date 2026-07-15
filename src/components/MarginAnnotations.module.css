@@ -91,6 +91,21 @@
   padding: 1px 5px;
 }
 
+.spinner {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-9);
+  border-top-color: var(--text-5);
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .toolHead {
   display: flex;
   align-items: center;

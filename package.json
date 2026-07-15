@@ -1,7 +1,7 @@
 {
   "name": "darkwords",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "description": "A client-side AI chat app for the Anthropic API and local models",
   "author": "Dustin Whyte",

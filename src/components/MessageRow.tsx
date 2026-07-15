@@ -7,6 +7,7 @@ import { Markdown } from './Markdown';
 import { MessageActions } from './MessageActions';
 import { MarginAnnotations } from './MarginAnnotations';
 import { DownloadIcon } from './icons';
+import { groupAttachmentsByFolder } from '../lib/attachmentGroups';
 import styles from './MessageRow.module.css';
 
 function FileIcon() {
@@ -61,10 +62,10 @@ export const MessageRow = memo(function MessageRow({ message }: { message: ChatM
         <div className={styles.body}>
           {message.attachments.length > 0 && (
             <div className={styles.attachments}>
-              {message.attachments.map((att) => (
-                <div key={att.id} className={styles.attachment}>
+              {groupAttachmentsByFolder(message.attachments).map((g) => (
+                <div key={g.key} className={styles.attachment}>
                   <FileIcon />
-                  <span className={styles.attachmentName}>{att.name}</span>
+                  <span className={styles.attachmentName}>{g.folder ? `${g.folder} (${g.count})` : g.label}</span>
                 </div>
               ))}
             </div>

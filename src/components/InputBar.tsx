@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } fro
 import { useAppStore } from '../store/useAppStore';
 import { makeId } from '../lib/id';
 import { blobToDataUrl } from '../lib/dataUrl';
+import { groupAttachmentsByFolder } from '../lib/attachmentGroups';
 import { PartyBar } from './PartyBar';
 import styles from './InputBar.module.css';
 
@@ -77,27 +78,7 @@ export function InputBar() {
     }
   };
 
-  const uploadGroups = (() => {
-    const groups: { key: string; folder?: string; name: string; ids: string[] }[] = [];
-    const byFolder = new Map<string, { key: string; folder: string; name: string; ids: string[] }>();
-    for (const u of uploads) {
-      const slash = u.name.indexOf('/');
-      if (slash === -1) {
-        groups.push({ key: u.id, name: u.name, ids: [u.id] });
-        continue;
-      }
-      const folder = u.name.slice(0, slash);
-      const existing = byFolder.get(folder);
-      if (existing) {
-        existing.ids.push(u.id);
-      } else {
-        const g = { key: `dir:${folder}`, folder, name: folder, ids: [u.id] };
-        byFolder.set(folder, g);
-        groups.push(g);
-      }
-    }
-    return groups;
-  })();
+  const uploadGroups = groupAttachmentsByFolder(uploads);
 
   const onFilesSelected = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -121,7 +102,7 @@ export function InputBar() {
             )}
             {uploadGroups.map((g) => (
               <div key={g.key} className={styles.uploadChip}>
-                <span className={styles.uploadName}>{g.folder ? `${g.folder} (${g.ids.length})` : g.name}</span>
+                <span className={styles.uploadName}>{g.folder ? `${g.folder} (${g.count})` : g.label}</span>
                 <button
                   className={styles.uploadRemove}
                   onClick={() => {

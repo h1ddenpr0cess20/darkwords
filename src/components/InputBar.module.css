@@ -19,16 +19,13 @@
   display: flex;
   gap: 8px;
   margin-bottom: 8px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 4px;
-  scrollbar-width: thin;
+  max-height: 132px;
+  overflow-y: auto;
 }
 
 .uploadClear {
-  flex: none;
   background: none;
   border: none;
   color: var(--text-6);
@@ -43,7 +40,6 @@
 }
 
 .uploadChip {
-  flex: none;
   display: flex;
   align-items: center;
   gap: 6px;

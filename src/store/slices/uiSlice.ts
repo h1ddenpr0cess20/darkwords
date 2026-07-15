@@ -17,6 +17,7 @@ export interface UiSlice {
   setInput: (text: string) => void;
   addUpload: (att: Attachment) => void;
   removeUpload: (id: string) => void;
+  clearUploads: () => void;
 
   openSettings: () => void;
   openHistory: () => void;
@@ -41,6 +42,7 @@ export const createUiSlice: SliceCreator<UiSlice> = (set) => ({
   setInput: (text) => set({ input: text }),
   addUpload: (att) => set((s) => ({ pendingUploads: [...s.pendingUploads, att] })),
   removeUpload: (id) => set((s) => ({ pendingUploads: s.pendingUploads.filter((u) => u.id !== id) })),
+  clearUploads: () => set({ pendingUploads: [] }),
 
   openSettings: () => set({ activePanel: 'settings', panelTab: 'personality', modelPickerOpen: false }),
   openHistory: () => set({ activePanel: 'history', modelPickerOpen: false }),

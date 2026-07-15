@@ -25,6 +25,8 @@ export interface StreamCallbacks {
 /** Guards against a model that keeps calling tools without ever answering. */
 const MAX_TOOL_ROUNDTRIPS = 8;
 
+const API_MAX_RETRIES = 5;
+
 /** Beta required for Anthropic's MCP connector. */
 const MCP_BETA = 'mcp-client-2025-11-20';
 
@@ -52,7 +54,12 @@ export async function completeOnce(opts: {
   signal?: AbortSignal;
 }): Promise<string> {
   const { apiKey, baseURL, model, prompt, maxTokens = 256, signal } = opts;
-  const client = new Anthropic({ apiKey: apiKey || 'none', baseURL, dangerouslyAllowBrowser: true });
+  const client = new Anthropic({
+    apiKey: apiKey || 'none',
+    baseURL,
+    dangerouslyAllowBrowser: true,
+    maxRetries: API_MAX_RETRIES,
+  });
 
   const response = await client.messages.create(
     {
@@ -262,7 +269,12 @@ export async function streamAssistantTurn(opts: {
     signal,
   } = opts;
 
-  const client = new Anthropic({ apiKey: apiKey || 'none', baseURL, dangerouslyAllowBrowser: true });
+  const client = new Anthropic({
+    apiKey: apiKey || 'none',
+    baseURL,
+    dangerouslyAllowBrowser: true,
+    maxRetries: API_MAX_RETRIES,
+  });
 
   const messages: Anthropic.Beta.BetaMessageParam[] = history.map((m) => ({
     role: m.role,

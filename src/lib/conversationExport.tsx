@@ -104,7 +104,7 @@ body {
 }
 .export-container { max-width: 820px; margin: 0 auto; }
 .export-header { margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid #262720; }
-.export-header h1 { margin: 0 0 4px; font-size: 1.4rem; font-family: "Newsreader", serif; }
+.export-header h1 { margin: 0 0 4px; font-size: 1.4rem; font-family: "Inter", system-ui, -apple-system, sans-serif; }
 .export-header .export-sub { color: #75776d; font-size: 0.85rem; }
 .chat { display: flex; flex-direction: column; gap: 20px; }
 .message { display: flex; align-items: flex-start; gap: 12px; }

@@ -4,3 +4,4 @@ release/
 *.local
 .DS_Store
 *.tsbuildinfo
+.claude

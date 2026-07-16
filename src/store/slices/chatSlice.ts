@@ -7,7 +7,7 @@ import { attachmentsToDocuments } from '../../lib/rag/retrieval';
 import { autoplayFinalizedMessage } from '../../lib/ttsAutoplay';
 import { partyOwnsInput } from './partySlice';
 import type { MessageVariant } from '../../types';
-import { appendMessage, messageText, nowTime, patchMessage, withConvo } from '../helpers';
+import { appendMessage, dropMessage, messageText, nowTime, patchMessage, withConvo } from '../helpers';
 import {
   activeModel,
   apiTarget,
@@ -135,6 +135,29 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
       set((st) =>
         withConvo(st, cid, (c) =>
           patchMessage(c, msgId, (m) => {
+            /**
+             * An aborted regeneration produced nothing and recorded no error —
+             * restore the version that was showing before, rather than leaving
+             * a blank bubble and recording an empty variant.
+             */
+            if (!m.rawText && !m.error) {
+              const variants = m.variants ?? [];
+              const index = Math.min(m.variantIndex ?? variants.length - 1, variants.length - 1);
+              const prev = variants[index];
+              if (prev) {
+                return {
+                  streaming: false,
+                  reasoning: false,
+                  rawText: prev.rawText,
+                  parts: prev.parts,
+                  thinking: prev.thinking,
+                  tools: prev.tools,
+                  imageGen: prev.imageGen,
+                  generatedFiles: prev.generatedFiles,
+                  variantIndex: index,
+                };
+              }
+            }
             const parts = m.rawText ? parseBlocks(m.rawText) : m.parts;
             const fresh: MessageVariant = {
               rawText: m.rawText,
@@ -285,17 +308,28 @@ export const createChatSlice: SliceCreator<ChatSlice> = (set, get) => ({
         set((s) => withConvo(s, cid, (c) => patchMessage(c, assistantId, (m) => ({ error: m.error ?? text }))));
       } finally {
         set((s) =>
-          withConvo(s, cid, (c) =>
-            patchMessage(c, assistantId, (m) => ({
+          withConvo(s, cid, (c) => {
+            const m = c.messages.find((x) => x.id === assistantId);
+            if (!m) return c;
+            /** A turn stopped before producing anything is dropped, like the party engine's empty bubbles. */
+            const empty =
+              !m.rawText &&
+              !m.error &&
+              !m.thinking &&
+              !m.tools?.length &&
+              !m.imageGen?.length &&
+              !m.generatedFiles?.length;
+            if (empty) return dropMessage(c, assistantId);
+            return patchMessage(c, assistantId, (mm) => ({
               streaming: false,
               reasoning: false,
-              parts: m.rawText
-                ? parseBlocks(m.rawText)
-                : m.error
-                  ? [{ type: 'para', text: `Error: ${m.error}` }]
-                  : m.parts,
-            })),
-          ),
+              parts: mm.rawText
+                ? parseBlocks(mm.rawText)
+                : mm.error
+                  ? [{ type: 'para', text: `Error: ${mm.error}` }]
+                  : mm.parts,
+            }));
+          }),
         );
         autoplayFinalizedMessage(get(), cid, assistantId);
       }

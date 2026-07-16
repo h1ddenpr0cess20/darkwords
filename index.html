@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#121210" />
   <script>
     try {
+      if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
       const m = localStorage.getItem('darkwords-mode') === 'light' ? 'light' : 'dark';
       document.documentElement.dataset.mode = m;
       if (m === 'light') document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f7f7f4');

@@ -90,6 +90,8 @@ export function InputBar() {
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    /** Enter that confirms an IME composition (keyCode 229 on Safari) must not send. */
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (isSending) return;

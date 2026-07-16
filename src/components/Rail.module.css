@@ -138,6 +138,8 @@
   bottom: 0;
   width: 250px;
   max-height: 60vh;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with vh fallback for older browsers */
+  max-height: 60dvh;
   overflow-y: auto;
   background: var(--field-bg);
   border: 1px solid var(--field-border);

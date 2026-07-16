@@ -114,9 +114,21 @@ async function connect(server: McpServer, signal?: AbortSignal): Promise<Session
   return { sessionId: list.sessionId, tools, fetchedAt: Date.now() };
 }
 
-/** Anthropic tool names must match ^[a-zA-Z0-9_-]{1,64}$. */
-function toolName(server: McpServer, tool: string): string {
-  return `${server.name}_${tool}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
+/**
+ * Anthropic tool names must match ^[a-zA-Z0-9_-]{1,64}$. Sanitizing and
+ * truncating can make two different tools collide, and the dispatch map is
+ * keyed by name — so collisions get a numeric suffix rather than silently
+ * routing both calls to whichever tool registered last.
+ */
+function toolName(server: McpServer, tool: string, taken: Set<string>): string {
+  const base = `${server.name}_${tool}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
+  let name = base;
+  for (let n = 2; taken.has(name); n++) {
+    const suffix = `_${n}`;
+    name = base.slice(0, 64 - suffix.length) + suffix;
+  }
+  taken.add(name);
+  return name;
 }
 
 function contentToText(result: unknown): { text: string; isError: boolean } {
@@ -135,6 +147,7 @@ function contentToText(result: unknown): { text: string; isError: boolean } {
  */
 export async function mcpClientTools(servers: McpServer[], signal?: AbortSignal): Promise<ClientTool[]> {
   const tools: ClientTool[] = [];
+  const takenNames = new Set<string>();
 
   for (const server of servers.filter((s) => s.enabled)) {
     let session = sessions.get(server.id);
@@ -153,7 +166,7 @@ export async function mcpClientTools(servers: McpServer[], signal?: AbortSignal)
     for (const info of session.tools) {
       const schema = info.inputSchema;
       tools.push({
-        name: toolName(server, info.name),
+        name: toolName(server, info.name, takenNames),
         description: info.description || `${info.name} (via ${server.name})`,
         input_schema: {
           type: 'object',

@@ -357,6 +357,12 @@ export async function streamAssistantTurn(opts: {
       demux.flush();
     } catch (err) {
       demux.flush();
+      /**
+       * The SDK reports an aborted stream as APIUserAbortError (an APIError
+       * subclass), not a DOMException — both must stay silent, or hitting
+       * Stop would mark the message as errored and drop it from history.
+       */
+      if (err instanceof Anthropic.APIUserAbortError || signal?.aborted) return;
       if (err instanceof DOMException && err.name === 'AbortError') return;
       if (err instanceof Anthropic.APIError) {
         callbacks.onError?.(`${err.status ?? ''} ${err.message}`.trim());

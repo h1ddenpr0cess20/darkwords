@@ -49,7 +49,11 @@ export function TopStrip() {
       <span className={styles.turns}>
         {turns} {turns === 1 ? 'turn' : 'turns'}
       </span>
-      {persona && <span className={styles.persona} title={persona}>{persona}</span>}
+      {persona && (
+        <span className={styles.persona} title={persona}>
+          {persona}
+        </span>
+      )}
       <div className={styles.spacer} />
 
       <button

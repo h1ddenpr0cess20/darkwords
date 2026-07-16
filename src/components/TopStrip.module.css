@@ -27,7 +27,7 @@
 }
 
 .persona::before {
-  content: '·';
+  content: "·";
   margin-right: 7px;
   color: var(--text-8);
 }

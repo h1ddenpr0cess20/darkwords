@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useAppStore } from './store/useAppStore';
 import { Rail } from './components/Rail';
 import { TopStrip } from './components/TopStrip';
 import { Feed } from './components/Feed';
@@ -12,10 +13,12 @@ import styles from './App.module.css';
 
 export function App() {
   const { accent, accentBg } = useAccent();
+  const fontScale = useAppStore((s) => s.fontScale);
   const desktop = isDesktopApp();
   const vars = {
     '--accent': accent,
     '--accent-bg': accentBg,
+    '--font-scale': fontScale,
     ...(desktop && {
       '--titlebar-height': `${TITLEBAR_HEIGHT}px`,
       paddingTop: TITLEBAR_HEIGHT,

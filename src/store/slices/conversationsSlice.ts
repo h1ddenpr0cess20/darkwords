@@ -3,7 +3,7 @@ import { makeId } from '../../lib/id';
 import { clearDocIndex } from '../../lib/rag/retrieval';
 import { conversationOrderForMode, emptyConversation, firstConversation, patchMessage, withConvo } from '../helpers';
 import { endRunningParty, loadPartyForConversation } from './partySlice';
-import { currentPersonaSnapshot, loadPersonaForConversation } from './settingsSlice';
+import { currentPersonaSnapshot, defaultPersonaSnapshot, loadPersonaForConversation } from './settingsSlice';
 import type { AppState, SliceCreator } from '../types';
 
 /**
@@ -34,9 +34,11 @@ export interface ConversationsSlice {
    * Opens a fresh conversation; reuses the current one if it is still empty.
    * Closes any open drawer panel unless `keepPanel` is set — callers inside
    * the Settings drawer (persona picks) must not yank the drawer away
-   * mid-interaction.
+   * mid-interaction. `persona` chooses the new chat's voice: `current` carries
+   * over the active persona (the default), `default` resets to the theme's
+   * built-in persona.
    */
-  newConversation: (opts?: { keepPanel?: boolean }) => void;
+  newConversation: (opts?: { keepPanel?: boolean; persona?: 'current' | 'default' }) => void;
   selectConversation: (id: string) => void;
   /** Deletes a conversation and its RAG index, creating a fresh one if none remain. */
   deleteConversation: (id: string) => void;
@@ -55,14 +57,22 @@ export const createConversationsSlice: SliceCreator<ConversationsSlice> = (set, 
 
   newConversation: (opts) => {
     const party = endRunningParty(get());
+    const persona = opts?.persona ?? 'current';
     set((s) => {
       const activePanel = opts?.keepPanel ? s.activePanel : null;
+      /** `party`'s promptMode patch (if any) hasn't landed in `s` yet — it's still queued in this same update. */
+      const snapshot = persona === 'default' ? defaultPersonaSnapshot() : currentPersonaSnapshot({ ...s, ...party });
       const current = s.conversations[s.activeConvoId];
       if (current && current.messages.length === 0) {
-        return { ...party, activePanel };
+        return persona === 'default'
+          ? {
+              ...party,
+              conversations: { ...s.conversations, [current.id]: { ...current, personaSnapshot: snapshot } },
+              activePanel,
+            }
+          : { ...party, activePanel };
       }
-      /** `party`'s promptMode patch (if any) hasn't landed in `s` yet — it's still queued in this same update. */
-      const c = { ...emptyConversation(), personaSnapshot: currentPersonaSnapshot({ ...s, ...party }) };
+      const c = { ...emptyConversation(), personaSnapshot: snapshot };
       return {
         ...party,
         conversations: { ...s.conversations, [c.id]: c },

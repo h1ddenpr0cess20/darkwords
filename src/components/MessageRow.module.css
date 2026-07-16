@@ -94,7 +94,7 @@
 
 .para {
   margin: 0;
-  font-size: 14.5px;
+  font-size: calc(14.5px * var(--font-scale, 1));
   line-height: 1.65;
   color: var(--text-1);
   white-space: pre-wrap;

@@ -62,6 +62,7 @@ export const useAppStore = create<AppState>()(
         personalityName: s.personalityName,
         customPrompt: s.customPrompt,
         verbose: s.verbose,
+        fontScale: s.fontScale,
         effort: s.effort,
         locationEnabled: s.locationEnabled,
         locationString: s.locationString,

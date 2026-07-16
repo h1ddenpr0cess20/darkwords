@@ -146,9 +146,23 @@ export function Rail() {
         />
       </svg>
 
-      <button onClick={() => newConversation()} title="New chat" className={styles.iconBtn}>
-        <ChatIcon />
-      </button>
+      <div className={styles.newWrap}>
+        <button
+          onClick={() => newConversation({ persona: 'default' })}
+          title="New chat"
+          className={styles.iconBtn}
+        >
+          <ChatIcon />
+        </button>
+        <div className={styles.newMenu} role="menu">
+          <button className={styles.newMenuItem} role="menuitem" onClick={() => newConversation({ persona: 'current' })}>
+            Current persona
+          </button>
+          <button className={styles.newMenuItem} role="menuitem" onClick={() => newConversation({ persona: 'default' })}>
+            Default persona
+          </button>
+        </div>
+      </div>
       <button
         onClick={openHistory}
         title="History"

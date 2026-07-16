@@ -1,7 +1,28 @@
 import type { CSSProperties } from 'react';
 import { useAppStore } from '../store/useAppStore';
+import { DEFAULT_PERSONALITY_NAME } from '../lib/prompt';
+import type { Conversation, PromptMode } from '../types';
+import type { PartyConfig } from '../lib/party/types';
 import { ExportMenu } from './ExportMenu';
 import styles from './TopStrip.module.css';
+
+function personaLabel(opts: {
+  party: PartyConfig | null;
+  promptMode: PromptMode;
+  personalityName: string;
+  customPrompt: string;
+  conversation: Conversation;
+}): string | null {
+  const { party, promptMode, personalityName, customPrompt } = opts;
+  if (party) {
+    const { conversationType, topic, setting, mood } = party.scenario;
+    const bits = [conversationType, topic, setting, mood].map((x) => x.trim()).filter(Boolean);
+    return bits.length ? `Party — ${bits.join(' · ')}` : 'Party';
+  }
+  if (promptMode === 'none') return 'No persona';
+  if (promptMode === 'custom') return customPrompt.trim() || 'Custom prompt';
+  return personalityName.trim() || DEFAULT_PERSONALITY_NAME;
+}
 
 /**
  * The conversation header: title, turn count, and the party cast chips. In
@@ -11,10 +32,16 @@ import styles from './TopStrip.module.css';
 export function TopStrip() {
   const conversation = useAppStore((s) => s.conversations[s.activeConvoId]);
   const party = useAppStore((s) => s.activeParty);
+  const promptMode = useAppStore((s) => s.promptMode);
+  const personalityName = useAppStore((s) => s.personalityName);
+  const customPrompt = useAppStore((s) => s.customPrompt);
+  const fontScale = useAppStore((s) => s.fontScale);
+  const setFontScale = useAppStore((s) => s.setFontScale);
 
   if (!conversation) return null;
 
   const turns = conversation.messages.filter((m) => !m.error && (party || m.role === 'user')).length;
+  const persona = personaLabel({ party, promptMode, personalityName, customPrompt, conversation });
 
   return (
     <div className={styles.strip}>
@@ -22,7 +49,25 @@ export function TopStrip() {
       <span className={styles.turns}>
         {turns} {turns === 1 ? 'turn' : 'turns'}
       </span>
+      {persona && <span className={styles.persona} title={persona}>{persona}</span>}
       <div className={styles.spacer} />
+
+      <button
+        className={styles.fontBtn}
+        onClick={() => setFontScale(fontScale - 0.1)}
+        disabled={fontScale <= 0.8}
+        title="Smaller text"
+      >
+        A−
+      </button>
+      <button
+        className={styles.fontBtnLarge}
+        onClick={() => setFontScale(fontScale + 0.1)}
+        disabled={fontScale >= 1.6}
+        title="Larger text"
+      >
+        A+
+      </button>
 
       <ExportMenu />
 

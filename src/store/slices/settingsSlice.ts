@@ -91,6 +91,9 @@ export interface SettingsSlice {
   customPrompt: string;
   verbose: boolean;
 
+  /** Multiplier applied to chat message text (1 = default). */
+  fontScale: number;
+
   /** Injects the user's approximate location into the system prompt when on. */
   locationEnabled: boolean;
   locationString: string;
@@ -123,6 +126,7 @@ export interface SettingsSlice {
   setCustomPrompt: (text: string) => void;
   toggleVerbose: () => void;
   resetPersonality: () => void;
+  setFontScale: (scale: number) => void;
 
   /** Turns location on and resolves a fresh fix; clears it back off on failure. */
   enableLocation: () => Promise<void>;
@@ -154,6 +158,8 @@ export const createSettingsSlice: SliceCreator<SettingsSlice> = (set, get) => ({
   personalityName: DEFAULT_PERSONALITY_NAME,
   customPrompt: '',
   verbose: false,
+
+  fontScale: 1,
 
   locationEnabled: false,
   locationString: '',
@@ -214,6 +220,7 @@ export const createSettingsSlice: SliceCreator<SettingsSlice> = (set, get) => ({
       verbose: false,
       ...snapshotPersonaPatch(s, { personalityName: DEFAULT_PERSONALITY_NAME, verbose: false }),
     })),
+  setFontScale: (scale) => set({ fontScale: Math.min(1.6, Math.max(0.8, Math.round(scale * 20) / 20)) }),
 
   enableLocation: async () => {
     set({ locationLoading: true, locationError: null });

@@ -39,11 +39,30 @@ export function InputBar() {
   const sendMessage = useAppStore((s) => s.sendMessage);
   const stopStreaming = useAppStore((s) => s.stopStreaming);
 
+  const wrapRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dirInputRef = useRef<HTMLInputElement>(null);
   const attachRef = useRef<HTMLDivElement>(null);
   const [attachOpen, setAttachOpen] = useState(false);
+
+  /**
+   * The input bar floats over the feed, which reserves bottom padding via
+   * this CSS var to keep the last message clear of it. The bar's height
+   * varies with the party control bar, upload chips, and textarea growth,
+   * so it's measured rather than guessed.
+   */
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const setSpace = () => {
+      document.documentElement.style.setProperty('--input-bar-space', `${el.offsetHeight + 24}px`);
+    };
+    setSpace();
+    const ro = new ResizeObserver(setSpace);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!attachOpen) return;
@@ -90,7 +109,7 @@ export function InputBar() {
   };
 
   return (
-    <div className={styles.wrap}>
+    <div className={styles.wrap} ref={wrapRef}>
       <div className={styles.inner}>
         <PartyBar />
         {uploads.length > 0 && (

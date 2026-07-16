@@ -31,8 +31,6 @@
 
 .image {
   max-width: 100%;
-  max-height: calc(100vh - 160px);
-  /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with vh fallback for older browsers */
   max-height: calc(100dvh - 160px);
   object-fit: contain;
   border-radius: 10px;

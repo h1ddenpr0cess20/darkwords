@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { resolveModel } from '../lib/models';
 import { useAccent } from '../lib/theme';
@@ -42,6 +42,22 @@ function HistoryIcon() {
     >
       <circle cx="12" cy="12" r="10" />
       <path d="M12 6v6l4 2" />
+    </svg>
+  );
+}
+function ChevronIcon() {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 9l6 6 6-6" />
     </svg>
   );
 }
@@ -106,6 +122,24 @@ export function Rail() {
 
   const modelWrapRef = useRef<HTMLDivElement>(null);
   const fetchedForOpenRef = useRef(false);
+  const newWrapRef = useRef<HTMLDivElement>(null);
+  const [newMenuOpen, setNewMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!newMenuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!newWrapRef.current?.contains(e.target as Node)) setNewMenuOpen(false);
+    };
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') setNewMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [newMenuOpen]);
 
   useEffect(() => {
     if (!modelPickerOpen) {
@@ -146,22 +180,37 @@ export function Rail() {
         />
       </svg>
 
-      <div className={styles.newWrap}>
+      <div className={styles.newWrap} ref={newWrapRef}>
         <button onClick={() => newConversation({ persona: 'default' })} title="New chat" className={styles.iconBtn}>
           <ChatIcon />
         </button>
-        <div className={styles.newMenu} role="menu">
+        <button
+          onClick={() => setNewMenuOpen((v) => !v)}
+          title="New chat options"
+          aria-haspopup="menu"
+          aria-expanded={newMenuOpen}
+          className={styles.newMenuToggle}
+        >
+          <ChevronIcon />
+        </button>
+        <div className={`${styles.newMenu} ${newMenuOpen ? styles.newMenuOpen : ''}`} role="menu">
           <button
             className={styles.newMenuItem}
             role="menuitem"
-            onClick={() => newConversation({ persona: 'current' })}
+            onClick={() => {
+              newConversation({ persona: 'current' });
+              setNewMenuOpen(false);
+            }}
           >
             Current persona
           </button>
           <button
             className={styles.newMenuItem}
             role="menuitem"
-            onClick={() => newConversation({ persona: 'default' })}
+            onClick={() => {
+              newConversation({ persona: 'default' });
+              setNewMenuOpen(false);
+            }}
           >
             Default persona
           </button>

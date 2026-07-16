@@ -42,6 +42,25 @@
 .newWrap {
   position: relative;
   display: flex;
+  align-items: center;
+}
+
+.newMenuToggle {
+  width: 16px;
+  height: 38px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.newMenuToggle:hover {
+  color: var(--accent);
 }
 
 .newMenu {
@@ -72,7 +91,8 @@
 }
 
 .newWrap:hover .newMenu,
-.newWrap:focus-within .newMenu {
+.newWrap:focus-within .newMenu,
+.newMenu.newMenuOpen {
   opacity: 1;
   pointer-events: auto;
 }
@@ -259,5 +279,20 @@
     left: auto;
     right: 0;
     bottom: 52px;
+  }
+
+  .newMenu {
+    left: 0;
+    top: auto;
+    bottom: 52px;
+  }
+
+  .newMenu::before {
+    top: auto;
+    bottom: -15px;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 15px;
   }
 }

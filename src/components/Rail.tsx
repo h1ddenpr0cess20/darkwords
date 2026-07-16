@@ -45,22 +45,6 @@ function HistoryIcon() {
     </svg>
   );
 }
-function ChevronIcon() {
-  return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
 function GalleryIcon() {
   return (
     <svg
@@ -181,17 +165,20 @@ export function Rail() {
       </svg>
 
       <div className={styles.newWrap} ref={newWrapRef}>
-        <button onClick={() => newConversation({ persona: 'default' })} title="New chat" className={styles.iconBtn}>
-          <ChatIcon />
-        </button>
         <button
-          onClick={() => setNewMenuOpen((v) => !v)}
-          title="New chat options"
+          onClick={() => {
+            if (window.matchMedia('(max-width: 720px)').matches) {
+              setNewMenuOpen((v) => !v);
+            } else {
+              newConversation({ persona: 'default' });
+            }
+          }}
+          title="New chat"
           aria-haspopup="menu"
           aria-expanded={newMenuOpen}
-          className={styles.newMenuToggle}
+          className={styles.iconBtn}
         >
-          <ChevronIcon />
+          <ChatIcon />
         </button>
         <div className={`${styles.newMenu} ${newMenuOpen ? styles.newMenuOpen : ''}`} role="menu">
           <button

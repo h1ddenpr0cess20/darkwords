@@ -45,24 +45,6 @@
   align-items: center;
 }
 
-.newMenuToggle {
-  width: 16px;
-  height: 38px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-6);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-}
-
-.newMenuToggle:hover {
-  color: var(--accent);
-}
-
 .newMenu {
   position: absolute;
   left: 53px;
@@ -90,11 +72,17 @@
   width: 15px;
 }
 
-.newWrap:hover .newMenu,
-.newWrap:focus-within .newMenu,
 .newMenu.newMenuOpen {
   opacity: 1;
   pointer-events: auto;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .newWrap:hover .newMenu,
+  .newWrap:focus-within .newMenu {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .newMenuItem {

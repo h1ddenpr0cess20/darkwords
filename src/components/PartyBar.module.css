@@ -85,3 +85,24 @@
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   color: var(--accent);
 }
+
+@media (max-width: 720px) {
+  .bar {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .status {
+    white-space: normal;
+  }
+
+  .cast {
+    flex: 1 1 100%;
+  }
+
+  .actions {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}

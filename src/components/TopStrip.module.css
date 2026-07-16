@@ -2,7 +2,9 @@
   flex: none;
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: 12px;
+  row-gap: 6px;
   padding: 22px 40px 14px;
 }
 
@@ -84,6 +86,8 @@
 .chips {
   display: flex;
   align-items: center;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
   gap: 7px;
 }
 
@@ -120,8 +124,6 @@
 @media (max-width: 720px) {
   .strip {
     padding: 12px 16px 8px;
-    flex-wrap: wrap;
-    row-gap: 6px;
   }
 
   .title {
@@ -135,9 +137,5 @@
   .persona {
     flex: 1 1 auto;
     max-width: none;
-  }
-
-  .chips {
-    flex-wrap: wrap;
   }
 }

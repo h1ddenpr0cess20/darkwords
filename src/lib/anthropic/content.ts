@@ -24,11 +24,25 @@ function base64ToText(base64: string): string | null {
   try {
     const bin = atob(base64);
     if (/[\x00-\x08\x0e-\x1f]/.test(bin)) return null;
-    return bin;
+    /**
+     * atob yields one char per byte (Latin-1), which garbles any non-ASCII
+     * text — decode the bytes as UTF-8, keeping Latin-1 as the fallback for
+     * files that aren't valid UTF-8.
+     */
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    } catch {
+      return bin;
+    }
   } catch {
     return null;
   }
 }
+
+/** The image formats the API accepts as native image blocks. */
+const IMAGE_MEDIA_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 
 /**
  * Converts one attachment to a content block: images and PDFs become native
@@ -41,7 +55,7 @@ function attachmentToBlock(att: Attachment): ContentBlockParam {
   }
   const base64 = dataUrlToBase64(att.dataUrl);
 
-  if (att.mimeType.startsWith('image/')) {
+  if (IMAGE_MEDIA_TYPES.has(att.mimeType)) {
     return {
       type: 'image',
       source: {
@@ -51,6 +65,11 @@ function attachmentToBlock(att: Attachment): ContentBlockParam {
       },
     };
   }
+  /**
+   * Image formats the API rejects (SVG, BMP, TIFF…) fall through to the
+   * generic path — text-decodable ones (SVG) inline as text, the rest degrade
+   * to the binary placeholder — instead of failing the whole turn with a 400.
+   */
   if (att.mimeType === 'application/pdf') {
     return { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } };
   }

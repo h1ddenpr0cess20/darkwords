@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TtsError } from './tts';
-import { ttsPlayback, type SpeakOpts } from './ttsPlayback';
+import { TtsController, ttsPlayback, type SpeakOpts } from './ttsPlayback';
 import type { StoredAudio } from './audioStorage';
 
 vi.mock('./tts', async (importOriginal) => {
@@ -81,6 +81,20 @@ describe('ttsPlayback', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(mockGenerate).toHaveBeenCalledTimes(1);
+  });
+
+  it('moves on to the next queued clip when a synthesis fails', async () => {
+    /** Fresh controller: the in-flight test above deliberately leaves the singleton's queue busy. */
+    const controller = new TtsController();
+    mockGenerate.mockRejectedValue(new TtsError('down'));
+
+    controller.enqueue('stall-1', opts);
+    controller.enqueue('stall-2', opts);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mockGenerate).toHaveBeenCalledTimes(2);
+    expect(controller.getState('stall-1')).toEqual({ status: 'idle', error: 'down' });
+    expect(controller.getState('stall-2')).toEqual({ status: 'idle', error: 'down' });
   });
 
   it('replays a stored clip from IndexedDB instead of re-synthesizing', async () => {

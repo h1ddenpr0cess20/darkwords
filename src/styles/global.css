@@ -10,10 +10,17 @@ html,
 body,
 #root {
   height: 100%;
+  overflow: hidden;
 }
 
 body {
   margin: 0;
+  /* Mobile scroll lock: the page itself never scrolls — the feed, drawer, and
+     popups each scroll internally — so browser UI (address bar) can't be
+     scrolled away out from under the layout. */
+  position: fixed;
+  inset: 0;
+  width: 100%;
   background: var(--bg);
   color: var(--text-0);
   font-family: var(--font-sans);

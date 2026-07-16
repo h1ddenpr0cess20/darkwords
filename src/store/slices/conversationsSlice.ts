@@ -125,6 +125,9 @@ export const createConversationsSlice: SliceCreator<ConversationsSlice> = (set, 
     const cut = source.messages.findIndex((m) => m.id === msgId);
     if (cut < 0) return;
 
+    /** Like any other conversation switch: the party stays with its own conversation, not the branch. */
+    const party = endRunningParty(s);
+
     const branch: Conversation = {
       id: makeId('conv'),
       title: `${source.title} (branch)`.slice(0, 60),
@@ -136,11 +139,13 @@ export const createConversationsSlice: SliceCreator<ConversationsSlice> = (set, 
     };
 
     set((st) => ({
+      ...party,
       conversations: { ...st.conversations, [branch.id]: branch },
       conversationOrder: [branch.id, ...st.conversationOrder],
       activeConvoId: branch.id,
       activePanel: null,
     }));
+    set(activateConversation(get().conversations[branch.id]));
   },
 
   selectVariant: (msgId, index) =>

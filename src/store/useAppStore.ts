@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { idbStorage } from '../lib/idbStorage';
-import type { GalleryItem } from '../types';
+import { parseBlocks } from '../lib/blocks';
+import type { Conversation, GalleryItem } from '../types';
 import { conversationOrderForMode, emptyConversation, firstConversation } from './helpers';
 import type { AppState } from './types';
 import { createUiSlice } from './slices/uiSlice';
@@ -110,14 +111,40 @@ export const useAppStore = create<AppState>()(
         let convoPatch: Partial<AppState> = {};
         let activeId = state.activeConvoId;
         let conversations = state.conversations;
+        /**
+         * Messages are persisted wholesale, so a reload mid-stream stores
+         * bubbles still flagged `streaming`/`reasoning`. No turn survives a
+         * reload, so finalize them here — otherwise they spin forever and
+         * stay hidden from actions, exports, and the party transcript.
+         */
+        const finalized = Object.fromEntries(
+          Object.entries(conversations).map(([id, c]): [string, Conversation] => {
+            if (!c.messages.some((m) => m.streaming || m.reasoning)) return [id, c];
+            return [
+              id,
+              {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.streaming || m.reasoning
+                    ? { ...m, streaming: false, reasoning: false, parts: m.rawText ? parseBlocks(m.rawText) : m.parts }
+                    : m,
+                ),
+              },
+            ];
+          }),
+        );
+        if (Object.entries(finalized).some(([id, c]) => c !== conversations[id])) {
+          conversations = finalized;
+          convoPatch = { conversations };
+        }
         if (!inMode.includes(activeId)) {
           if (inMode.length > 0) {
             activeId = inMode[0];
-            convoPatch = { activeConvoId: activeId };
+            convoPatch = { ...convoPatch, activeConvoId: activeId };
           } else {
             const c = { ...emptyConversation(), personaSnapshot: defaultPersonaSnapshot() };
             activeId = c.id;
-            conversations = { ...state.conversations, [c.id]: c };
+            conversations = { ...conversations, [c.id]: c };
             convoPatch = {
               conversations,
               conversationOrder: [c.id, ...state.conversationOrder],

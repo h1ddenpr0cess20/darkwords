@@ -45,7 +45,8 @@ const IDLE: TtsState = { status: 'idle' };
 /** Reserved key for the Settings → Voice "Test voice" preview clip. */
 export const TTS_SAMPLE_ID = '__tts_sample__';
 
-class TtsController {
+/** Exported for tests that need a controller isolated from the shared singleton. */
+export class TtsController {
   private audios = new Map<string, HTMLAudioElement>();
   private cache = new Map<string, Cached>();
   private states = new Map<string, TtsState>();
@@ -179,7 +180,12 @@ class TtsController {
         this.queueOpts.delete(id);
         if (!opts) continue;
         await this.play(id, opts);
-        return;
+        /**
+         * Only stop once a clip actually started — handleEnded re-drains
+         * when it finishes. A failed synthesis starts nothing, so falling
+         * through to the next clip is what keeps the queue from stalling.
+         */
+        if (this.activeId === id) return;
       }
     } finally {
       this.draining = false;

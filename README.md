@@ -31,20 +31,18 @@ The UI was created with Claude Design and polished with Claude Code.
 <td align="center"><em>Eight accent themes</em></td>
 </tr>
 <tr>
-<td><img src="docs/screenshots/dark-personas.png" alt="Dark mode persona list in Settings" width="420"></td>
+<td colspan="2" align="center"><img src="docs/screenshots/dark-personas.png" alt="Dark mode persona list in Settings" width="420"></td>
+</tr>
+<tr>
+<td colspan="2" align="center"><em>Persona list — dark mode</em></td>
+</tr>
+<tr>
 <td><img src="docs/screenshots/mobile-light-personas.png" alt="Light mode persona list on a mobile viewport, Rose accent" width="230"></td>
-</tr>
-<tr>
-<td align="center"><em>Persona list — dark mode</em></td>
-<td align="center"><em>Persona list — mobile, light mode</em></td>
-</tr>
-<tr>
 <td><img src="docs/screenshots/mobile-dark.png" alt="Dark mode on a mobile viewport, Dusk accent" width="230"></td>
-<td></td>
 </tr>
 <tr>
+<td align="center"><em>Persona list — mobile, light mode</em></td>
 <td align="center"><em>Mobile — dark mode</em></td>
-<td></td>
 </tr>
 </table>
 

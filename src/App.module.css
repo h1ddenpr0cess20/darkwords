@@ -1,8 +1,14 @@
 .app {
   width: 100%;
-  height: 100vh;
-  /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with vh fallback for older browsers */
-  height: 100dvh;
+  /*
+   * height: 100% (not vh/dvh) so this tracks the same viewport measurement
+   * body's scroll-lock (position: fixed; inset: 0) already clips #root to.
+   * A separately-computed dvh here can transiently disagree with that
+   * fixed/inset height right after a reload (e.g. the dark/light toggle),
+   * before mobile browser chrome finishes settling — the mismatch clips
+   * the bottom of this column-reverse layout, hiding the rail/toolbar.
+   */
+  height: 100%;
   display: flex;
   background: var(--bg);
   font-family: var(--font-sans);

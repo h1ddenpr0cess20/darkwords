@@ -11,6 +11,43 @@ bottom bar and the drawer a full-width sheet.
 
 The UI was created with Claude Design and polished with Claude Code.
 
+## Screenshots
+
+<table>
+<tr>
+<td><img src="docs/screenshots/dark-chat.png" alt="Dark mode chat, Ember accent" width="420"></td>
+<td><img src="docs/screenshots/light-chat.png" alt="Light mode chat, Teal accent" width="420"></td>
+</tr>
+<tr>
+<td align="center"><em>Dark mode — Ember accent</em></td>
+<td align="center"><em>Light mode — Teal accent</em></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/party-mode.png" alt="Party mode, a three-character conversation, Crimson accent" width="420"></td>
+<td><img src="docs/screenshots/theme-colors.png" alt="The eight accent theme colors in Settings" width="420"></td>
+</tr>
+<tr>
+<td align="center"><em>Party mode — an autonomous multi-character chat</em></td>
+<td align="center"><em>Eight accent themes</em></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/dark-personas.png" alt="Dark mode persona list in Settings" width="420"></td>
+<td><img src="docs/screenshots/party-setup.png" alt="Party mode setup: scenario and cast, Violet accent" width="420"></td>
+</tr>
+<tr>
+<td align="center"><em>Persona list — dark mode</em></td>
+<td align="center"><em>Party mode — scenario and cast setup</em></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/mobile-light-personas.png" alt="Light mode persona list open on a mobile viewport, Rose accent" width="230"></td>
+<td><img src="docs/screenshots/mobile-dark.png" alt="Dark mode on a mobile viewport, Dusk accent" width="230"></td>
+</tr>
+<tr>
+<td align="center"><em>Persona list — mobile, light mode</em></td>
+<td align="center"><em>Mobile — dark mode</em></td>
+</tr>
+</table>
+
 ## Stack
 
 - React 19 + TypeScript, built with Vite

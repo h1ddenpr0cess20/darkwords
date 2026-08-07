@@ -15,6 +15,10 @@ function makeSlice() {
     state = { ...state, ...next };
   };
   const get = () => state;
+  // Zustand's StateCreator contract is (set, get, store); this slice happens to
+  // only destructure `set`, so the last two are unused by the implementation but
+  // still required by the type.
+  // codeql[js/superfluous-trailing-arguments]
   const slice = createTtsSlice(set as never, get as never, {} as never) as TtsSlice;
   state = { ...state, ...slice };
   return { get: () => state as TtsSlice };
